@@ -28,6 +28,27 @@ Normalisierung → Validation (Mythen-DB) → Opportunity Score → Inbox
 ## Stack
 Next.js (App Router) · TypeScript · Tailwind · shadcn/ui · Supabase · Vercel (+ Cron) · Claude API · YouTube Data API v3
 
+## Prompts (Claude API, Discovery-Pipeline)
+
+Die Pipeline ruft Claude an drei Stellen auf (`lib/pipeline/claude.ts`), jeweils über
+erzwungenes Tool-Use (`tool_choice`) statt Freitext-JSON – die API validiert/parst die
+Antwort serverseitig gegen ein Schema, das ist robuster als das Parsen von Modelltext
+(in der Praxis kam es bei Freitext-JSON zu vereinzelt abgeschnittenen/leicht fehlerhaften
+Antworten, v. a. bei der Normalisierung mit ihrer langen Mythen-Liste im Prompt).
+
+1. **Topic Detection** – klassifiziert das Transkript in `ernaehrung` / `fitness` /
+   `gesundheit` / `off_topic`. `ernaehrung` ist bewusst von den anderen beiden getrennt,
+   weil Confidence-Check #3 ("Thema: Ernährung, Chris-Kernthema") genau darauf abfragt.
+   Off-Topic-Videos brechen die Pipeline ab (Skip + Log, `discovery_log`).
+2. **Claim Extraction** – liest das Transkript mit `[MM:SS]`-Zeitstempeln und liefert bis
+   zu 3 wörtliche Zitate + Timestamp. "Wörtlich" wird nicht Claude geglaubt, sondern
+   programmatisch gegen den Transkripttext verifiziert (`isQuoteVerbatimInTranscript`).
+3. **Normalisierung + Matching** – bringt das Zitat in eine kanonische Kurzform und
+   gleicht es gegen alle Mythen-DB-Einträge ab (`myth_id` oder `null`). Ein Guard prüft,
+   dass Claude keine erfundene id zurückgibt.
+
+Alle drei Prompts stehen im Volltext in `lib/pipeline/claude.ts`.
+
 ## Prinzipien
 - **"Würde Chris das morgen früh tatsächlich benutzen?"** – sonst streichen.
 - Demo-First: erster Eindruck darf nie von leerer Liste oder Ladezeit abhängen.
