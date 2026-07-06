@@ -3,10 +3,10 @@
 > Sortiert nach Priorität. ⚠ = kritischer Pfad.
 
 ## Morgen (Tag 1, Code-Start)
-- [ ] ⚠ Projekt-Setup: Next.js + TS + Tailwind + shadcn/ui + Supabase + Vercel-Deploy
-- [ ] ⚠ Supabase-Schema anlegen (videos, claims, myths, snapshots, feedback, weights)
-- [ ] ⚠ **Snapshot-Cron deployen** – läuft ab sofort täglich, sammelt Velocity-Daten
-- [ ] Passwort-Middleware
+- [x] ⚠ Projekt-Setup: Next.js + TS + Tailwind + shadcn/ui (Code fertig, gepusht auf GitHub) – Supabase-Projekt anlegen + Vercel-Import bleiben User-Aktion
+- [x] ⚠ Supabase-Schema als SQL-Migration fertig (`supabase/migrations/0001_init.sql`) – im SQL Editor ausführen, sobald Supabase-Projekt existiert
+- [x] ⚠ **Snapshot-Cron-Route + `vercel.json` deployed** (`app/api/cron/snapshot`) – läuft automatisch täglich, sobald Vercel-Projekt importiert + ENV-Vars gesetzt sind
+- [x] Passwort-Middleware (`proxy.ts`, HTTP Basic Auth gegen `AUTH_USERNAME`/`AUTH_PASSWORD`)
 - [ ] Mythen-DB: erste 10 Mythen mit Quellen einpflegen (Rest parallel in Phase 1)
 
 ## Pipeline (Phase 1)
