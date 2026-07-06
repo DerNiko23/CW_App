@@ -20,8 +20,15 @@ type YouTubeVideosResponse = {
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
+  // Vercel Cron sendet den Bearer-Header automatisch; der Query-Param erlaubt
+  // manuelles Ausloesen per Browser-Adressleiste (kein Custom-Header noetig).
+  const querySecret = request.nextUrl.searchParams.get("secret");
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  const authorized =
+    !!cronSecret &&
+    (authHeader === `Bearer ${cronSecret}` || querySecret === cronSecret);
+
+  if (!authorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
