@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [2026-07-06] Phase 0 abgeschlossen – Live-Verifikation
+
+### Verifiziert
+- App live auf Vercel, Passwort-Login (`proxy.ts` Basic Auth) im Browser getestet – funktioniert.
+- Snapshot-Cron manuell über neuen `?secret=`-Query-Trigger auf `/api/cron/snapshot` ausgelöst (zusätzlich zum automatischen Bearer-Header-Weg für Vercel Cron) – Antwort wie erwartet.
+- Damit ist Phase 0 (ROADMAP.md) vollständig abgeschlossen; Cron sammelt ab sofort täglich Velocity-Daten, auch ohne auf die geplante Uhrzeit zu warten.
+
+### Nachgetragen
+- Neuer Task in TASKS.md (Abschluss/Phase 4–5): `CRON_SECRET` vor der finalen Einreichung rotieren, da der aktuelle Wert beim manuellen Testen in der Browser-URL sichtbar war.
+
+---
+
 ## [2026-07-06] Phase 0 – Setup & Snapshot-Cron live
 
 ### Entschieden

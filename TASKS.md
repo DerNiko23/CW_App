@@ -2,11 +2,11 @@
 
 > Sortiert nach Priorität. ⚠ = kritischer Pfad.
 
-## Morgen (Tag 1, Code-Start)
-- [x] ⚠ Projekt-Setup: Next.js + TS + Tailwind + shadcn/ui (Code fertig, gepusht auf GitHub) – Supabase-Projekt anlegen + Vercel-Import bleiben User-Aktion
-- [x] ⚠ Supabase-Schema als SQL-Migration fertig (`supabase/migrations/0001_init.sql`) – im SQL Editor ausführen, sobald Supabase-Projekt existiert
-- [x] ⚠ **Snapshot-Cron-Route + `vercel.json` deployed** (`app/api/cron/snapshot`) – läuft automatisch täglich, sobald Vercel-Projekt importiert + ENV-Vars gesetzt sind
-- [x] Passwort-Middleware (`proxy.ts`, HTTP Basic Auth gegen `AUTH_USERNAME`/`AUTH_PASSWORD`)
+## Morgen (Tag 1, Code-Start) — ✅ Phase 0 abgeschlossen
+- [x] ⚠ Projekt-Setup: Next.js + TS + Tailwind + shadcn/ui, live auf Vercel deployed
+- [x] ⚠ Supabase-Schema als SQL-Migration angelegt und im Supabase-Projekt ausgeführt (`supabase/migrations/0001_init.sql`)
+- [x] ⚠ **Snapshot-Cron live** (`app/api/cron/snapshot` + `vercel.json`) – manuell per `?secret=`-Query-Trigger verifiziert, Antwort wie erwartet
+- [x] Passwort-Middleware (`proxy.ts`, HTTP Basic Auth) – Login auf Vercel getestet, funktioniert
 - [ ] Mythen-DB: erste 10 Mythen mit Quellen einpflegen (Rest parallel in Phase 1)
 
 ## Pipeline (Phase 1)
@@ -31,6 +31,7 @@
 - [ ] Export-Funktion
 - [ ] Design-Polish (Leer-/Lade-/Fehlerzustände, Animationen, Mobile)
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
+- [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [ ] Einreichung via Tally
 
 ## E-Book (parallel laufend)
