@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Newsreader, Geist_Mono } from "next/font/google";
+import { Space_Grotesk, Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const display = Space_Grotesk({
-  variable: "--font-display",
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
 });
 
-const editorial = Newsreader({
-  variable: "--font-editorial",
+const body = Inter({
+  variable: "--font-body",
   subsets: ["latin"],
-  style: ["normal", "italic"],
 });
 
 const geistMono = Geist_Mono({
@@ -31,7 +30,7 @@ export default function RootLayout({
   return (
     <html
       lang="de"
-      className={`${display.variable} ${editorial.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${display.variable} ${body.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

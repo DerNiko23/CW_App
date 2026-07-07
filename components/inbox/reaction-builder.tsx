@@ -57,11 +57,11 @@ export function ReactionBuilder({
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-3xl border-2 border-accent/50 bg-accent/5 p-5 sm:p-6">
+    <section className="flex flex-col gap-4 border border-border border-t-4 border-t-accent bg-card p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Sparkles className="size-4 text-accent-foreground" />
-          <h2 className="font-display text-sm font-semibold tracking-wide text-foreground uppercase">
+          <h2 className="font-heading text-sm font-semibold tracking-wide text-foreground uppercase">
             Reaktions-Baukasten
           </h2>
         </div>
@@ -92,7 +92,7 @@ export function ReactionBuilder({
                 key={i}
                 className="flex items-start justify-between gap-3 rounded-xl bg-card p-3 text-sm"
               >
-                <span className="font-serif italic">{hook}</span>
+                <span className="font-medium">{hook}</span>
                 <CopyButton text={hook} />
               </div>
             ))}

@@ -35,7 +35,7 @@ export default async function InboxPage({
           </p>
           <ExportLinks />
         </div>
-        <h1 className="font-display text-2xl font-semibold text-balance sm:text-3xl">
+        <h1 className="font-heading text-2xl font-semibold text-balance sm:text-3xl">
           Lohnt es sich, dazu heute ein Video aufzunehmen?
         </h1>
       </header>
@@ -47,7 +47,7 @@ export default async function InboxPage({
       {items.length === 0 ? (
         <div className="animate-in fade-in flex flex-col items-center gap-3 rounded-3xl border border-dashed border-border py-24 text-center duration-500">
           <Inbox className="size-8 text-muted-foreground" />
-          <p className="font-display text-lg font-medium">Keine Videos für diese Filter</p>
+          <p className="font-heading text-lg font-medium">Keine Videos für diese Filter</p>
           <p className="max-w-sm text-sm text-muted-foreground">
             Passe die Filter an oder starte einen Discovery-Lauf, um neue Fundstücke zu sammeln.
           </p>

@@ -37,6 +37,10 @@
   `ANTHROPIC_API_KEY` fehlte in Vercel Production/Preview-ENV (nur lokal gesetzt). Hinzugefügt
   + redeployed + live auf `cw-app-eosin.vercel.app` mit echtem Basic-Auth-Login verifiziert
   (Skript generiert sich jetzt fehlerfrei). Details in CHANGELOG.
+- [x] Design-Redesign (weg vom "KI-generiert"-Look): neues Token-System (Off-White/Fast-Schwarz,
+  Deep-Teal-Akzent, echte Ampel-Logik, scharfe Radien, Inter+Space-Grotesk-Typografie) auf allen
+  3 Views angewendet. Dabei einen latenten Bug gefunden+gefixt (`font-display` war nie eine echte
+  Tailwind-Utility). Details in CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

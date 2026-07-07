@@ -38,7 +38,7 @@ export default async function VideoDetailPage({
   const showActions = video.status === "new" || video.status === "accepted";
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-14 px-4 py-8 sm:px-6 sm:py-12">
       <Link
         href="/"
         className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -65,7 +65,7 @@ export default async function VideoDetailPage({
             <p className="text-xs text-muted-foreground">
               {video.channel ?? "Unbekannter Kanal"} · {formatDate(video.publishedAt)}
             </p>
-            <h1 className="font-display text-lg font-semibold text-balance sm:text-xl">
+            <h1 className="font-heading text-lg font-semibold text-balance sm:text-xl">
               {video.title}
             </h1>
             <div className="flex flex-wrap items-center gap-2">
@@ -91,12 +91,18 @@ export default async function VideoDetailPage({
       </header>
 
       {/* Block A: Die Falschaussage */}
-      <section className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-5 sm:p-6">
+      <section className="flex flex-col gap-3 border-t border-border pt-8">
         <h2 className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
           Die Falschaussage
         </h2>
-        <blockquote className="font-serif text-xl leading-snug text-foreground italic sm:text-2xl">
-          „{claim.quote}“
+        <blockquote className="border-l-[3px] border-accent py-1 pl-5 text-xl leading-snug font-medium text-foreground sm:text-2xl">
+          <span aria-hidden className="mr-0.5 font-heading text-accent">
+            „
+          </span>
+          {claim.quote}
+          <span aria-hidden className="ml-0.5 font-heading text-accent">
+            “
+          </span>
         </blockquote>
         <a
           href={youtubeTimestampUrl(video.url, claim.timestamp_s)}
@@ -117,13 +123,13 @@ export default async function VideoDetailPage({
       </section>
 
       {/* Block B: Warum jetzt reagieren? */}
-      <section className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5 sm:p-6">
+      <section className="flex flex-col gap-4 border-t border-border pt-8">
         <h2 className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
           Warum jetzt reagieren?
         </h2>
         <div className="flex items-center gap-4">
           <ScoreBadge score={score.total} size="lg" />
-          <p className="font-display text-sm text-muted-foreground">
+          <p className="font-heading text-sm text-muted-foreground">
             Opportunity Score
             <br />
             <span className="text-foreground">{topicLabel(claim.topic)}</span>
@@ -140,7 +146,7 @@ export default async function VideoDetailPage({
       </section>
 
       {/* Block C: Confidence-Checkliste */}
-      <section className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5 sm:p-6">
+      <section className="flex flex-col gap-4 border-t border-border pt-8">
         <h2 className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
           Confidence
         </h2>
@@ -150,7 +156,7 @@ export default async function VideoDetailPage({
           <div className="flex flex-col gap-3 border-t border-border pt-4">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Gematchter Mythos</p>
-              <p className="font-display text-sm font-medium">{claim.myth.claim_pattern}</p>
+              <p className="font-heading text-sm font-medium">{claim.myth.claim_pattern}</p>
             </div>
             <p className="text-sm text-foreground/85">{claim.myth.verdict}</p>
             {claim.myth.sources.length > 0 && (

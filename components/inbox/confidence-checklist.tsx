@@ -40,11 +40,11 @@ export function ConfidenceChecklist({
           className={cn(
             "size-2.5 rounded-full",
             tier === "high" && "bg-success",
-            tier === "medium" && "bg-accent",
+            tier === "medium" && "bg-warning",
             tier === "low" && "bg-destructive/70",
           )}
         />
-        <span className="font-display text-xl font-semibold tabular-nums">
+        <span className="font-heading text-xl font-semibold tabular-nums">
           {Math.round(confidence)}%
         </span>
         <span className="text-sm text-muted-foreground">— {TIER_LABEL[tier]}</span>

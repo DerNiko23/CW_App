@@ -1,5 +1,69 @@
 # CHANGELOG
 
+## [2026-07-07] Design-Redesign: weg vom "KI-generiert"-Look (Design-Richtung C)
+
+Reiner visueller Redesign-Pass über alle 3 Views (Inbox, Detailansicht, Reaktions-Baukasten),
+keine Funktionsänderung. Grund: die bisherige "Design-Richtung B" (warmes Creme, Amber-Akzent,
+`rounded-3xl` überall, Newsreader-Serif-Kursiv-Zitate, weiche Radial-Gradient-Blobs im
+Hintergrund) ist der bekannteste KI-Generierungs-Default und schwächt "Design-Gespür"
+(Bewertungskriterium MASTERPLAN §8) – wirkt wie ein Wellness-Blog, nicht wie ein eigenständiges
+SaaS-Tool.
+
+**Neues Token-System** (`app/globals.css`, alle Werte als Hex statt OKLCH):
+- Neutrales Off-White (`#FAFAFA`) / Fast-Schwarz (`#141414`) statt Creme/Charcoal.
+- Ein Akzent: Deep Teal `#0B7A6A` (mit dem User abgestimmt: 2 Optionen vorgeschlagen –
+  Cobalt Blue vs. Deep Teal –, Teal gewählt; Hex leicht von der Vorschau-Farbe `#0C8C7A`
+  nachgeschärft für AA-Kontrast auf Weiß).
+- Echte Ampel-Logik für Score/Confidence: neuer `--warning`-Token (`#C99A02`) ergänzt
+  `--success`/`--destructive` – vorher nutzte der "mittlere" Tier fälschlich die Akzentfarbe
+  (Bug: Statusfarbe und Markenfarbe waren vermischt), jetzt sauber getrennt
+  (`score-badge.tsx`, `confidence-checklist.tsx`).
+- `--radius` von `0.85rem` auf `0.15rem` – da alle `rounded-{sm..4xl}`-Stufen bereits aus diesem
+  einen Wert berechnet werden, schärft eine Zeile automatisch Cards/Buttons/Inputs/Popovers auf
+  2–6px, ohne Klassen in den Komponenten anzufassen. Badges/Status-Pills bleiben bewusst
+  `rounded-full` (Tag-Semantik, keine Regression).
+- Inter (neu) als Body-/UI-Font, Space Grotesk exklusiv für Headlines + die Score-Zahl.
+  Newsreader (Serif/Kursiv) komplett entfernt – Zitate ("Die Falschaussage") bekommen
+  stattdessen einen linken Akzent-Farbbalken + stilisiertes „-Zeichen statt Kursivschrift.
+- Dekorative Radial-Gradient-Blobs + SVG-Noise-Overlay im `body`-Hintergrund entfernt (flache
+  Fläche).
+- Score-Zahl auf der Detailseite ist jetzt das visuelle Signature-Element: kein umschließender
+  Chip mehr, nur eine große Space-Grotesk-Zahl (`text-6xl`) in Ampel-Farbe + Tier-Dot.
+- Detailseiten-Blöcke (Falschaussage / Warum jetzt reagieren / Confidence) verloren ihre
+  Card-Umrandung (`bg-card border rounded-3xl`) zugunsten von Hairline-Trennern
+  (`border-t border-border`) und mehr Weißraum zwischen den Blöcken.
+- Reaktions-Baukasten: Glow-Box (`border-2 border-accent/50 bg-accent/5`) ersetzt durch eine
+  scharfkantige Section mit `border-t-4 border-accent`-Signaturstreifen.
+
+**Live gefundener und gefixter Bug:** `font-display` (auf allen Headlines/der Score-Zahl seit
+Projektstart verwendet) war **nie eine echte Tailwind-Utility** – `@theme inline` registrierte
+nur `--font-heading`, nicht `--font-display` selbst, und Tailwind reserviert `--font-display`
+intern für den CSS-`font-display`-Deskriptor (`@font-face`-Ladeverhalten), sodass ein eigener
+Wert dafür beim Build still verworfen wird (selbst-referenzierend zu `var(--font-display)`
+kompiliert). Unsichtbar bisher, weil `--font-sans` zufällig auch auf Space Grotesk zeigte – mit
+Inter als neuem Body-Font wäre jede Headline plötzlich in Inter statt Space Grotesk gelandet.
+Fix: alle Vorkommen von `font-display` in den Komponenten auf `font-heading` umbenannt (das
+bereits korrekt gemappte, unbenutzte Theme-Token), `--font-display` aus `globals.css` entfernt.
+Per DOM-Inspektion (`getComputedStyle`) verifiziert: Headlines/Score-Zahl rendern jetzt korrekt
+in Space Grotesk.
+
+**Live geprüft:** Ampel-Logik gegen echte Daten (Score 61 → grün, 59/52/47/46 → gelb), Zitat-
+Behandlung (kein Kursiv mehr, Akzent-Balken korrekt), Hairline-Dividers + Reaktions-Baukasten-
+Streifen per DOM-Inspektion, kein horizontales Overflow bei 375px (Inbox + Detailseite).
+`npm run build`/`npm run lint` sauber. Screenshot-Tool war in dieser Session durchgehend nicht
+nutzbar (Timeout) – Verifikation komplett über `preview_eval`/`preview_inspect`
+(computed styles, DOM-Struktur) statt visueller Screenshots.
+
+**Nebenbei entdeckt, bewusst nicht angefasst:** Die Detailseite (`/videos/[id]`) hängt im
+Turbopack-Dev-Server nach einer Hard-Navigation zuverlässig im Suspense-Fallback fest (echter
+Inhalt liegt korrekt im HTML, aber in einem `<div hidden>`, das nie sichtbar geswappt wird –
+`document.querySelectorAll('section')` zeigt Skeleton *und* echten Inhalt gleichzeitig).
+Per `git stash` gegen den unveränderten Code verifiziert: **reproduziert identisch ohne jede
+Redesign-Änderung** – vorbestehender Dev-Mode-Bug (Next.js 16.2.10 + Turbopack), nicht durch
+dieses Redesign verursacht. Nicht gefixt, da außerhalb des Scopes "reines Redesign, keine
+Funktionsänderung" – separates Ticket falls das auch in einem echten Browser (nicht nur im
+automatisierten Preview-Tool) reproduziert.
+
 ## [2026-07-07] Reaktions-Baukasten-Fehler auf Vercel: Root Cause gefunden und behoben
 
 Root Cause bestätigt über `vercel logs` (Runtime-Logs des Production-Deployments), nicht geraten:

@@ -20,7 +20,7 @@ export default function InboxError({
         <AlertTriangle className="size-6" />
       </div>
       <div className="flex flex-col gap-1.5">
-        <p className="font-display text-lg font-medium">Etwas ist schiefgelaufen</p>
+        <p className="font-heading text-lg font-medium">Etwas ist schiefgelaufen</p>
         <p className="max-w-sm text-sm text-muted-foreground">
           Die Inbox konnte nicht geladen werden. Das kann an einer kurzzeitigen
           Verbindungsstörung zur Datenbank liegen.
