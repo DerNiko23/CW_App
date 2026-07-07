@@ -33,15 +33,13 @@
 - [x] Export-Funktion (CSV + Markdown, `app/api/export/route.ts`)
 - [x] Design-Polish (Leer-/Lade-/Fehlerzustände, Animationen, Mobile) – `app/loading.tsx`, `app/videos/[id]/loading.tsx`, `app/error.tsx`, `app/videos/[id]/not-found.tsx` neu; Karten-Fade-in-Animation; Mobile (375px) und Ladezeit (<400ms) live geprüft, siehe CHANGELOG für den dabei gefundenen/gefixten Doppel-`<main>`-Bug.
 - [x] Code-Review über die gesamte Projekthistorie (8 Review-Winkel, Commit 2cf8ed6 bis heute) – 6 echte Bugs/Regeln-Verstöße gefunden und gefixt, 2 Kandidaten nach Prüfung verworfen, 2 bewusst zurückgestellt (Details/Begründung in CHANGELOG).
-- [ ] ⚠ **Reaktions-Baukasten-Fehler auf Vercel nachtesten** – Nutzer-Report: "Skript generieren"
-  liefert Next.js' generische Production-Fehlermeldung (Digest, keine Details). Lokal (Dev
-  UND echter Production-Build) nicht reproduzierbar - `generateAndSaveReactionScript` direkt
-  aufgerufen lief fehlerfrei durch. Nächster Schritt: nach diesem Deploy auf der echten
-  Vercel-URL erneut testen, bei erneutem Auftreten die Vercel-Function-Logs prüfen (dort steht
-  die volle Fehlermeldung). Siehe CHANGELOG für Details.
+- [x] ⚠ **Reaktions-Baukasten-Fehler auf Vercel** – Root Cause via `vercel logs` gefunden:
+  `ANTHROPIC_API_KEY` fehlte in Vercel Production/Preview-ENV (nur lokal gesetzt). Hinzugefügt
+  + redeployed + live auf `cw-app-eosin.vercel.app` mit echtem Basic-Auth-Login verifiziert
+  (Skript generiert sich jetzt fehlerfrei). Details in CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
-- [ ] `AUTH_PASSWORD` von `test-local-only` auf ein echtes Passwort setzen (in Vercel-ENV, nicht im Repo) – die Basic-Auth-Parsing-Fix aus der Code-Review macht auch Passwörter mit Doppelpunkt sicher nutzbar
+- [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt
 - [ ] Einreichung via Tally
 
 ## E-Book (parallel laufend)

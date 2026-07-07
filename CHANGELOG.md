@@ -1,32 +1,49 @@
 # CHANGELOG
 
-## [2026-07-07] Bekanntes, ungeklärtes Problem: Reaktions-Baukasten-Fehler (Nutzer-Report)
+## [2026-07-07] Reaktions-Baukasten-Fehler auf Vercel: Root Cause gefunden und behoben
 
-Nutzer-Report: Klick auf "Skript generieren" im Reaktions-Baukasten liefert
-"An error occurred in the Server Components render. The specific message is omitted in
-production builds..." - das ist Next.js' generische Fehlermeldung für einen Production-Build
-(erscheint so nie im Dev-Server).
+Root Cause bestätigt über `vercel logs` (Runtime-Logs des Production-Deployments), nicht geraten:
 
-**Untersucht, aber nicht reproduziert:**
-- `generateAndSaveReactionScript` (die Kernfunktion hinter dem Button) direkt aufgerufen
-  (Honig-Video, 751f599d) - lief erfolgreich durch, erzeugte ein brauchbares Skript und
-  speicherte es korrekt in der DB.
-- Lokal einen echten Production-Build getestet (`npm run build && npm start`, Port 3001) und
-  dieselbe Detailseite abgerufen - kein Fehler, Seite rendert korrekt.
-- Die Browser-Preview-Session in diesem Chat war zu dem Zeitpunkt bereits unzuverlässig
-  (Screenshots liefen in Timeouts, `getBoundingClientRect` lieferte durchgehend Nullen) - ein
-  UI-Klick-Test war daher nicht aussagekräftig und wurde nicht als Beleg gewertet.
+```
+Error: ANTHROPIC_API_KEY nicht gesetzt
+    at j (.next/server/chunks/ssr/_0pzwurq._.js:16:1467)
+    ...
+  digest: '4025235996'
+```
 
-**Naheliegendste Erklärung:** Der Fehler wurde vermutlich auf dem **deployten Vercel-Stand**
-beobachtet, der zum Zeitpunkt des Reports noch auf dem alten Phase-3-Commit lief (nichts aus
-dieser Session war bis dahin gepusht) - z. B. durch eine fehlende/abweichende
-`ANTHROPIC_API_KEY`-Umgebungsvariable auf Vercel, oder einen dort noch vorhandenen älteren Bug.
-Mit diesem Push läuft auf Vercel erstmals der aktuelle Code inkl. aller heutigen Fixes.
+`ANTHROPIC_API_KEY` stand zwar in `.env.local`, war aber **nie** als Vercel-Environment-Variable
+für Production/Preview angelegt worden (`vercel env ls production` zeigte nur 6 der 7 lokal
+gesetzten Variablen). `callClaudeTool` (`lib/claude/client.ts:26`) wirft in diesem Fall bewusst
+einen `Error("ANTHROPIC_API_KEY nicht gesetzt")` - aber Next.js redigiert Server-Action-Fehler in
+Production-Builds standardmäßig zur generischen "Server Components render"-Meldung, bevor sie den
+Browser erreichen. Deshalb zeigte der Client nur den Digest, nie den echten Text, obwohl
+`reaction-builder.tsx` den Fehler technisch korrekt per try/catch abfängt und anzeigt.
 
-**Nächster Schritt:** Nach diesem Deploy auf der echten Vercel-URL erneut "Skript generieren"
-testen. Falls der Fehler weiterhin auftritt: Vercel-Function-Logs (Dashboard -> Deployment ->
-Functions -> Logs) prüfen - dort steht die volle, nicht redigierte Fehlermeldung, anders als im
-Browser. Siehe auch TASKS.md.
+**Warum das beim letzten Mal nicht auffiel:** Der direkte Aufruf von
+`generateAndSaveReactionScript` lief lokal (mit lokal gesetztem `ANTHROPIC_API_KEY`) und der lokale
+Production-Build liefen beide fehlerfrei durch - beide hatten den Key. Nur die tatsächliche
+Vercel-Umgebung nicht. Ohne echten Log-Zugriff auf das Deployment war das vorher nicht zu sehen.
+
+**Fix:**
+1. `ANTHROPIC_API_KEY` per `vercel env add` zu Production und Preview hinzugefügt (Wert identisch
+   zu `.env.local`).
+2. Production-Deployment per `vercel redeploy` neu gebaut, damit der neue Wert in die
+   Server-Functions gebacken wird (Vercel injiziert ENV-Vars beim Build, nicht live).
+3. End-to-End live gegen `cw-app-eosin.vercel.app` verifiziert: eingeloggt (Basic Auth), auf dem
+   Honig-Video (`cb8d2f2a...`) "Skript generieren" geklickt - Server-Action-POST kam mit `200`
+   zurück (vorher `500`), alle 4 Blöcke (Hooks, Kernargument, Analogie, CTA) rendern korrekt mit
+   echtem, in Chris' Ton generiertem Inhalt.
+
+**Nebenbei entdeckt:** `AUTH_PASSWORD` in Vercel Production ist bereits ein echtes Passwort
+(nicht mehr `test-local-only`) - der entsprechende TASKS.md-Punkt war schon erledigt, nur nicht
+abgehakt.
+
+**Nicht angefasst (bewusst zurückgestellt):** Next.js redigiert *alle* Server-Action-Fehler in
+Production auf diese generische Meldung, nicht nur diesen einen Fall. Für ein Ein-Personen-Tool
+wäre es hilfreich, echte Fehlermeldungen im UI zu zeigen (z. B. durch Rückgabe von
+`{error: string}` statt `throw` in den Server Actions). Das wäre ein Verhaltens-/API-Change über
+alle Server Actions hinweg (`app/actions.ts`) und damit mehr als der reine Bugfix - siehe
+IDEAS.md, falls gewünscht.
 
 ## [2026-07-07] Code-Review über die gesamte Projekthistorie (Commit 2cf8ed6 bis heute)
 
