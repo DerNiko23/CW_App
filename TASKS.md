@@ -47,6 +47,15 @@
   bestätigt: Testbrowser-Antiviren-Erweiterung (Bitdefender), kein App-/Server-Bug.
   `app/videos/[id]/loading.tsx` wiederhergestellt (nur ans neue Hairline-Design angepasst).
   Details in CHANGELOG.
+- [x] Eigene Login-Seite statt Browser-Basic-Auth: `/login` im Design-System, HMAC-signierter
+  HttpOnly-Session-Cookie (`lib/auth/session.ts`), `AUTH_PASSWORD` bleibt einzige Quelle der
+  Wahrheit (kein neues Secret). `AUTH_USERNAME` aus `.env.example` entfernt (ungenutzt). Details
+  in CHANGELOG.
+- [x] Filter-Labels + Anzeige-Bug (Base UI `items`-Prop), 7 Kontrast-Bugs (`text-accent-foreground` →
+  `text-accent`), URL-Import-Feld/Button-Höhe, Auto-Search-Button (Discovery-Pipeline mit Live-Fortschritt,
+  Streaming statt Polling, stoppt bei 5 Treffern/20 Kandidaten/8 Suchen), Leerzustand jetzt mit echter
+  Handlung statt nur Text. Auto-Search live mit echten API-Aufrufen getestet (5 Treffer gefunden, u. a.
+  Honig-Mythos, Confidence 100). Details in CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

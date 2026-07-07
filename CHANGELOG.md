@@ -1,5 +1,84 @@
 # CHANGELOG
 
+## [2026-07-08] Filter-Labels, Kontrast-Bugs, Auto-Search-Button, Leerzustand, Import-Form-Höhe
+
+Fünf Nutzer-gemeldete Punkte in einem Batch behoben.
+
+**Filter-Dropdowns** (`components/inbox/filter-bar.tsx`): Alle 4 Dropdowns (Status, Plattform, Thema,
+Score-Bereich) bekommen eine kleine Caption darüber, da man vorher nicht ohne Klicken erkennen konnte,
+was sie filtern. Zusätzlich einen Anzeige-Bug gefixt: nach Auswahl zeigte der geschlossene Trigger den
+rohen Slug (`ernaehrung`) statt des Labels (`Ernährung`) – Ursache war, dass Base UI's `Select.Value`
+das Label über die aktuell gemounteten `SelectItem`s auflöst, die beim Schließen des Popups (Portal)
+unmounten. Fix: `Select.Root` bekommt jetzt eine `items`-Prop (`{value, label}[]`), die dafür extra von
+Base UI vorgesehen ist – löst das Label unabhängig vom Mount-Status auf, behebt den Bug für alle 4
+Filter gleichzeitig. Alle 4 Filter selbst funktionierten bereits korrekt (nur die Anzeige war kaputt).
+
+**Kontrast-Bugs** (7 Stellen, 4 Dateien): `text-accent-foreground` (weiß, nur für Text auf
+`bg-accent`-Hintergrund gedacht) wurde 6× freistehend auf hellem Hintergrund verwendet und war damit
+unsichtbar – CSV/Markdown-Export-Links, "Original ansehen"-Link, Quellen-Links auf der Detailseite und
+im Reaktions-Baukasten, Sparkles-Icon. Fix überall: `text-accent-foreground` → `text-accent` (Teal,
+bereits AA-kontrastgeprüft). Zusätzlich den "Angenommen"-Status-Badge an die Farbkonvention der
+Geschwister-Badges (`done`/`rejected`: getönter Hintergrund + solide Textfarbe) angeglichen.
+
+**URL-Import-Feld**: Input (`h-9`) und "Importieren"-Button (`h-8` Default-Größe) waren 4px
+unterschiedlich hoch. Input auf `h-8` verkleinert – das ist die App-weite Standardhöhe (auch bei
+Select-Triggern).
+
+**Auto-Search-Button** (`components/inbox/auto-search-button.tsx`, `app/api/pipeline/auto-search/route.ts`):
+Löst die bestehende Discovery-Pipeline aus und sucht, bis 5 neue Videos mit Confidence ≥ 70 % gefunden
+wurden. Da `runDiscovery` bisher ein starrer Batch-Lauf ohne Stopp-Mechanismus war, `lib/pipeline/discovery.ts`
+um einen `onProgress`-Callback plus zwei Limits erweitert (`stopAfterFoundCount`, `maxCandidatesProcessed`) –
+neue Parameter sind optional, bestehende Aufrufer (`/api/cron/discover`, `scripts/test-pipeline.ts`)
+unverändert kompatibel. Drei Grenzen, je nachdem was zuerst eintritt: 5 gefundene Treffer, 20 geprüfte
+Kandidaten (Sicherheitsnetz gegen Claude-Kosten/Wartezeit bei schlechter Trefferquote), 8 `search.list`-
+Aufrufe (≈800 von 10.000 Tages-Units). Live-Fortschritt im Button ("Suche läuft... x/5 gefunden") per
+Streaming-Response (`ReadableStream`, NDJSON) statt Polling (keine neue Job-State-Tabelle nötig) oder
+reinem Blocking-Call (hätte keinen echten Fortschritt zeigen können). Neue Abhängigkeit `sonner` für die
+Ergebnis-Toasts ("5 neue Videos gefunden" / "Keine neuen Treffer") – kein Toast-Primitive existierte
+bisher im Projekt, `sonner` ist der De-facto-Standard für shadcn-artige Projekte, React-19-kompatibel
+geprüft. `/api/cron/discover` läuft aktuell nicht automatisiert (nicht in `vercel.json` eingetragen) –
+der Auto-Search-Button ist damit faktisch der erste wiederkehrende Weg, wie neue Videos gefunden werden.
+**Live mit echten YouTube-/Claude-Aufrufen getestet**: ein Klick fand und verarbeitete 9 Kandidaten,
+stoppte korrekt exakt bei 5 Treffern (u. a. ein neuer Honig-Mythos-Treffer mit Confidence 100), alle 5
+erschienen danach in der Standard-Inbox-Ansicht.
+
+**Leerzustand** (`app/page.tsx`): Unterscheidet jetzt zwischen "Filter schließen alles aus" (Hinweis +
+"Filter zurücksetzen"-Link) und "keine aktiven Filter, Inbox aber trotzdem leer" (Hinweis verweist auf
+den jetzt echten Auto-Search-Button statt wie bisher auf unklickbaren Text).
+
+## [2026-07-07] Eigene Login-Seite statt Browser-Basic-Auth
+
+`proxy.ts` prüfte bisher rohe HTTP-Basic-Auth-Header (`AUTH_USERNAME`/`AUTH_PASSWORD`) und zeigte
+den nativen Browser-Login-Dialog – funktional, aber nicht im App-Design gestaltbar und nicht das
+gewünschte Erlebnis für eine Bewerbungs-Demo. Ersetzt durch eine eigene `/login`-Seite im
+bestehenden Design-System (zentriert, "Faktencheck" als Space-Grotesk-Headline, schlichtes
+Passwort-Feld + Button, kein Card-Chrome).
+
+**Session-Mechanismus:** Statt Basic-Auth-Header wird nach erfolgreichem Login ein signierter,
+HttpOnly-Cookie (`fc_session`, `Secure` in Production, `SameSite=Lax`, 180 Tage Laufzeit) gesetzt.
+Signiert wird per HMAC-SHA256 über `crypto.subtle` (Web-Crypto-API, läuft identisch in der
+Edge-Runtime von `proxy.ts` und der Node-Runtime der Server Action) – der Signierschlüssel wird
+direkt aus `AUTH_PASSWORD` abgeleitet, es gibt also **kein neues Secret**: `AUTH_PASSWORD` bleibt
+einzige Quelle der Wahrheit, exakt wie gefordert. Verifikation läuft über `crypto.subtle.verify`
+(intern konstant-zeitig, kein manueller String-Vergleich der Signatur → keine Timing-Angriffsfläche).
+Neues Modul: `lib/auth/session.ts`.
+
+`app/login/actions.ts` (Server Action) gibt bei Fehleingabe bewusst `{ error }` zurück statt zu
+werfen – ein geworfener Server-Action-Error hätte Next.js' generisches Error-Overlay gezeigt statt
+der geforderten ruhigen Inline-Meldung ("Passwort stimmt nicht."). `app/login/page.tsx` redirected
+sofort zur Inbox, falls bereits ein gültiger Cookie vorliegt (kein Login-Flackern bei bestehender
+Session).
+
+`AUTH_USERNAME` ist damit ungenutzt (nur noch in der jetzt ersetzten Basic-Auth-Logik referenziert)
+– aus `.env.example` entfernt, Kommentar auf den neuen Mechanismus aktualisiert.
+
+**Live getestet** (Dev-Server): Redirect ohne Cookie auf `/login`, Falscheingabe zeigt ruhige
+Inline-Fehlermeldung ohne Reload/Error-Overlay, korrektes Passwort redirected zur Inbox und setzt
+den Cookie, Session übersteht Reload, `/login` redirected bei bestehender Session sofort zur Inbox,
+ein manuell gefälschter Cookie (`curl` mit falscher Signatur) wird zuverlässig abgelehnt (307 zurück
+auf `/login`), Cookie ist per JS nicht lesbar/überschreibbar (HttpOnly greift), Mobile-Viewport
+(375px) ohne horizontalen Overflow. `npm run build` und `npm run lint` sauber.
+
 ## [2026-07-07] Untersuchung "Detailseite hängt im Lade-Skeleton": Testbrowser-Artefakt, kein App-Bug
 
 Auf Nutzer-Hinweis hin gezielt gegen die echte Production-URL getestet (nicht nur Dev-Server):

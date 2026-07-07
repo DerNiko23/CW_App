@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { passesConfidenceThreshold } from "./confidence";
 import { loadMyths } from "./myths";
 import { processVideo, type ProcessVideoResult } from "./process";
 import {
@@ -19,6 +20,12 @@ export type DiscoveryRunSummary = {
   results: Array<{ externalId: string; result: ProcessVideoResult }>;
   quotaUsedToday: number;
 };
+
+// Auto-Search-Button: Live-Fortschritt fuer einen interaktiv wartenden Nutzer,
+// ohne neue Job-State-Tabelle - der Callback treibt direkt einen Streaming-Response.
+export type DiscoveryProgressEvent =
+  | { type: "candidate"; externalId: string; result: ProcessVideoResult; foundCount: number; checkedCount: number }
+  | { type: "done"; summary: DiscoveryRunSummary; foundCount: number; checkedCount: number };
 
 function buildQueries(myths: Awaited<ReturnType<typeof loadMyths>>): string[] {
   const queries = myths.flatMap((myth) =>
@@ -52,6 +59,11 @@ export async function runDiscovery(params: {
   youtubeApiKey: string;
   maxSearchesThisRun?: number;
   maxResultsPerQuery?: number;
+  // Auto-Search: frueher Abbruch der (teuren) Verarbeitungsschleife, sobald genug
+  // Treffer gefunden sind oder ein Sicherheitsnetz-Limit erreicht ist.
+  stopAfterFoundCount?: number;
+  maxCandidatesProcessed?: number;
+  onProgress?: (event: DiscoveryProgressEvent) => void;
 }): Promise<DiscoveryRunSummary> {
   const { supabase, youtubeApiKey, maxResultsPerQuery = 10 } = params;
 
@@ -92,7 +104,18 @@ export async function runDiscovery(params: {
   const newIds = await filterUnseenVideoIds(supabase, uniqueFoundIds);
   summary.videoIdsNew = newIds.length;
 
-  for (let i = 0; i < newIds.length; i += VIDEOS_LIST_BATCH_SIZE) {
+  const { stopAfterFoundCount, maxCandidatesProcessed, onProgress } = params;
+  let checkedCount = 0;
+  let foundCount = 0;
+
+  function targetReached(): boolean {
+    return (
+      (stopAfterFoundCount !== undefined && foundCount >= stopAfterFoundCount) ||
+      (maxCandidatesProcessed !== undefined && checkedCount >= maxCandidatesProcessed)
+    );
+  }
+
+  for (let i = 0; i < newIds.length && !targetReached(); i += VIDEOS_LIST_BATCH_SIZE) {
     const batch = newIds.slice(i, i + VIDEOS_LIST_BATCH_SIZE);
     const details = await getVideoDetails(batch, youtubeApiKey);
     await addQuotaUsage(supabase, YOUTUBE_VIDEOS_LIST_COST);
@@ -100,9 +123,17 @@ export async function runDiscovery(params: {
     for (const metadata of details) {
       const result = await processVideo({ supabase, metadata, myths, weights });
       summary.results.push({ externalId: metadata.externalId, result });
+      checkedCount += 1;
+      if (result.status === "processed" && passesConfidenceThreshold(result.bestClaim.confidence.score)) {
+        foundCount += 1;
+      }
+      onProgress?.({ type: "candidate", externalId: metadata.externalId, result, foundCount, checkedCount });
+
+      if (targetReached()) break;
     }
   }
 
   summary.quotaUsedToday = await getQuotaUsedToday(supabase);
+  onProgress?.({ type: "done", summary, foundCount, checkedCount });
   return summary;
 }

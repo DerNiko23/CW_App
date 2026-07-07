@@ -75,7 +75,7 @@ export default async function VideoDetailPage({
                 href={video.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-accent-foreground/80 underline-offset-2 hover:underline"
+                className="inline-flex items-center gap-1 text-xs text-accent underline-offset-2 hover:underline"
               >
                 Original ansehen <ExternalLink className="size-3" />
               </a>
@@ -169,7 +169,7 @@ export default async function VideoDetailPage({
                         href={source.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sm text-accent-foreground/90 underline-offset-2 hover:underline"
+                        className="inline-flex items-center gap-1 text-sm text-accent underline-offset-2 hover:underline"
                       >
                         {source.title} <ExternalLink className="size-3 shrink-0" />
                       </a>

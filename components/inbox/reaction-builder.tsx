@@ -60,7 +60,7 @@ export function ReactionBuilder({
     <section className="flex flex-col gap-4 border border-border border-t-4 border-t-accent bg-card p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Sparkles className="size-4 text-accent-foreground" />
+          <Sparkles className="size-4 text-accent" />
           <h2 className="font-heading text-sm font-semibold tracking-wide text-foreground uppercase">
             Reaktions-Baukasten
           </h2>
@@ -117,7 +117,7 @@ export function ReactionBuilder({
                     href={source.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-accent-foreground/90 underline-offset-2 hover:underline"
+                    className="inline-flex items-center gap-1 text-accent underline-offset-2 hover:underline"
                   >
                     {source.title} <ExternalLink className="size-3 shrink-0" />
                   </a>

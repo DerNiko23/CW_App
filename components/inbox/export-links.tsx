@@ -10,14 +10,14 @@ export function ExportLinks() {
       <span>Export:</span>
       <a
         href="/api/export?format=csv"
-        className="rounded-md px-1.5 py-0.5 font-medium text-accent-foreground/80 underline-offset-2 hover:bg-muted hover:underline"
+        className="rounded-md px-1.5 py-0.5 font-medium text-accent underline-offset-2 hover:bg-muted hover:underline"
       >
         CSV
       </a>
       <span aria-hidden>·</span>
       <a
         href="/api/export?format=md"
-        className="rounded-md px-1.5 py-0.5 font-medium text-accent-foreground/80 underline-offset-2 hover:bg-muted hover:underline"
+        className="rounded-md px-1.5 py-0.5 font-medium text-accent underline-offset-2 hover:bg-muted hover:underline"
       >
         Markdown
       </a>

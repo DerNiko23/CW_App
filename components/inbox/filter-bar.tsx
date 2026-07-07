@@ -19,11 +19,13 @@ import {
 type Option = { value: string; label: string };
 
 function FilterSelect({
+  label,
   paramKey,
   options,
   allLabel,
   defaultValue = "all",
 }: {
+  label: string;
   paramKey: string;
   options: readonly Option[];
   allLabel: string;
@@ -33,6 +35,7 @@ function FilterSelect({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const value = searchParams.get(paramKey) ?? defaultValue;
+  const items = [{ value: "all", label: allLabel }, ...options];
 
   function handleChange(next: string | null) {
     if (next === null) return;
@@ -46,19 +49,25 @@ function FilterSelect({
   }
 
   return (
-    <Select value={value} onValueChange={handleChange}>
-      <SelectTrigger className="bg-card">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">{allLabel}</SelectItem>
-        {options.map((o) => (
-          <SelectItem key={o.value} value={o.value}>
-            {o.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="flex flex-col gap-1">
+      <span className="px-0.5 text-[11px] font-medium text-muted-foreground">{label}</span>
+      {/* `items` gibt Select.Value die Label-Zuordnung unabhaengig vom Mount-Status
+          der Popup-Liste - ohne das faellt die Anzeige nach dem Schliessen auf den
+          rohen `value` zurueck (Base UI Select-Verhalten). */}
+      <Select items={items} value={value} onValueChange={handleChange}>
+        <SelectTrigger className="bg-card">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{allLabel}</SelectItem>
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
@@ -69,16 +78,27 @@ export function FilterBar() {
   const hasActiveFilters = searchParams.toString().length > 0;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-end gap-2">
       <FilterSelect
+        label="Status"
         paramKey="status"
         options={STATUS_OPTIONS.filter((s) => s.value !== "all")}
         allLabel="Alle Status"
         defaultValue="new"
       />
-      <FilterSelect paramKey="platform" options={PLATFORM_OPTIONS} allLabel="Alle Plattformen" />
-      <FilterSelect paramKey="topic" options={TOPIC_OPTIONS} allLabel="Alle Themen" />
-      <FilterSelect paramKey="scoreBand" options={SCORE_BAND_OPTIONS} allLabel="Alle Scores" />
+      <FilterSelect
+        label="Plattform"
+        paramKey="platform"
+        options={PLATFORM_OPTIONS}
+        allLabel="Alle Plattformen"
+      />
+      <FilterSelect label="Thema" paramKey="topic" options={TOPIC_OPTIONS} allLabel="Alle Themen" />
+      <FilterSelect
+        label="Score-Bereich"
+        paramKey="scoreBand"
+        options={SCORE_BAND_OPTIONS}
+        allLabel="Alle Scores"
+      />
       {hasActiveFilters && (
         <button
           type="button"

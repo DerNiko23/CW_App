@@ -4,7 +4,7 @@ import type { VideoStatus } from "@/lib/inbox/types";
 
 const STATUS_STYLE: Record<VideoStatus, string> = {
   new: "bg-secondary text-secondary-foreground",
-  accepted: "bg-accent/25 text-accent-foreground border border-accent/40",
+  accepted: "bg-accent/15 text-accent border border-accent/30",
   done: "bg-success/15 text-success border border-success/30",
   rejected: "bg-destructive/10 text-destructive border border-destructive/20",
 };

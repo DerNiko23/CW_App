@@ -71,7 +71,7 @@ export function UrlImportForm() {
             onChange={(e) => setUrl(e.target.value)}
             placeholder="YouTube-URL einwerfen …"
             disabled={isPending}
-            className="h-9 w-full rounded-lg border border-input bg-card pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-8 w-full rounded-lg border border-input bg-card pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
         </div>
         <Button type="submit" disabled={isPending || !url.trim()}>
