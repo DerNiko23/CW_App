@@ -2,6 +2,7 @@ import { Inbox } from "lucide-react";
 import { getInboxItems } from "@/lib/inbox/queries";
 import { VideoCard } from "@/components/inbox/video-card";
 import { FilterBar } from "@/components/inbox/filter-bar";
+import { UrlImportForm } from "@/components/inbox/url-import-form";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,8 @@ export default async function InboxPage({
           Lohnt es sich, dazu heute ein Video aufzunehmen?
         </h1>
       </header>
+
+      <UrlImportForm />
 
       <FilterBar />
 

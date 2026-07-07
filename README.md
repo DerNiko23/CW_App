@@ -69,6 +69,31 @@ Videos/Claims/Myths/Snapshots/Weights und berechnet Score/Novelty pro Video mit 
 - **Design**: eigene Farbpalette (warmes Off-White/Charcoal/Amber, konsistent mit der
   E-Book-Richtung) statt Standard-shadcn-Grau, siehe `app/globals.css`.
 
+## Reaktions-Baukasten (`lib/reaction/`, `components/inbox/reaction-builder.tsx`)
+
+Ein-Klick-Generierung bei Angenommen/Erledigt (MASTERPLAN §3.3): Hook (3 Varianten),
+Kernargument, Analogie, CTA per Claude (`lib/reaction/claude.ts`, gleicher Tool-Use-Client
+wie die Pipeline, siehe `lib/claude/client.ts`). **Quellen kommen nicht von Claude**, sondern
+direkt aus dem bereits verifizierten `myths.sources_json` – keine Halluzinationsgefahr.
+Ton-Kalibrierung über 4 echte Transkript-Ausschnitte von Chris (`lib/reaction/styleReference.ts`).
+Ergebnis wird in `videos.reaction_script` persistiert (Migration `0004`), damit nicht bei
+jedem Aufruf neu generiert wird. Alle Teile einzeln + gesamt kopierbar.
+
+## Adaptive Ranking (`lib/ranking/adaptive.ts`)
+
+MASTERPLAN §3.5: Reject-Gründe passen die `weights`-Tabelle an. "Zu kleine Reichweite" /
+"Aussage nicht klar falsch" / "Bereits behandelt" erhöhen das jeweils passende Score-Gewicht
+(reach/confidence/novelty) leicht, alle 5 Gewichte werden renormalisiert (Summe bleibt 1.0,
+kein Gewicht fällt unter 0.05 oder über 0.6). "Thema uninteressant" hat keine eigene
+Score-Komponente – stattdessen markiert die Funktion den gematchten Mythos nach 3
+Wiederholungen als `covered_by_chris` (nutzt die bestehende Novelty-Logik).
+
+## Manueller URL-Import (`components/inbox/url-import-form.tsx`)
+
+MASTERPLAN §5: Formular auf der Inbox, ruft `/api/pipeline/import` auf (volle Pipeline für
+eine einzelne URL, Backend aus Phase 1). Erfolg → Redirect zur Detailseite, Skip/Fehler →
+Inline-Meldung.
+
 ## Prinzipien
 - **"Würde Chris das morgen früh tatsächlich benutzen?"** – sonst streichen.
 - Demo-First: erster Eindruck darf nie von leerer Liste oder Ladezeit abhängen.

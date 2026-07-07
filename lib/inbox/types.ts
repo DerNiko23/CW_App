@@ -1,4 +1,5 @@
 import type { ConfidenceChecks, ScoreBreakdown } from "@/lib/pipeline/types";
+import type { ReactionScript } from "@/lib/reaction/types";
 
 export type VideoStatus = "new" | "accepted" | "done" | "rejected";
 
@@ -34,6 +35,7 @@ export type InboxItem = {
     thumbnail: string | null;
     status: VideoStatus;
     doneAt: string | null;
+    reactionScript: ReactionScript | null;
   };
   claim: ClaimInfo;
   otherClaimsCount: number;

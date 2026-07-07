@@ -22,8 +22,9 @@
 - [x] Inbox-Liste mit Filtern (Plattform/Thema/Score-Bereich/Status als URL-Params) – `app/page.tsx`, `components/inbox/filter-bar.tsx`
 - [x] Accept/Reject + Quick-Reasons – `app/actions.ts`, `components/inbox/action-buttons.tsx`, Popover mit den 4 Gründen aus MASTERPLAN §3.1
 - [x] Detailseite (3 Blöcke: Aussage / Warum jetzt / Confidence) – `app/videos/[id]/page.tsx`
-- [ ] Reaktions-Baukasten
-- [ ] Manueller URL-Import (Pipeline-Funktion existiert bereits: `lib/pipeline/import.ts` + `app/api/pipeline/import`; UI-Formular dafür fehlt noch)
+- [x] Reaktions-Baukasten (Hook ×3, Kernargument, Quellen aus Mythen-DB, Analogie, CTA, alles einzeln + gesamt kopierbar) – `lib/reaction/`, `components/inbox/reaction-builder.tsx`, live mit 2 echten Videos getestet (siehe CHANGELOG)
+- [x] Manueller URL-Import – UI-Formular `components/inbox/url-import-form.tsx` auf der Inbox (Backend existierte bereits aus Phase 1)
+- [x] Adaptive Ranking (MASTERPLAN §3.5) – Reject-Grund passt `weights`-Tabelle an bzw. markiert Mythos als abgedeckt (`lib/ranking/adaptive.ts`)
 - [x] Status-Flow (Neu→Angenommen→Erledigt) + "Bereits behandelt"-Badge – live mit echten Daten getestet (siehe CHANGELOG)
 - [ ] Liste von Chris' ~20 bekanntesten Mythen-Videos recherchieren und in `myths.covered_by_chris` pflegen
 

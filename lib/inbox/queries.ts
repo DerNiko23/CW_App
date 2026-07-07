@@ -5,6 +5,7 @@ import { isMythNovel } from "@/lib/pipeline/novelty";
 import { computeOpportunityScore, computeVelocityFromSnapshots } from "@/lib/pipeline/score";
 import { loadWeights } from "@/lib/pipeline/weights";
 import type { ConfidenceChecks, ScoreWeights } from "@/lib/pipeline/types";
+import type { ReactionScript } from "@/lib/reaction/types";
 import type { InboxFilters, InboxItem, MythInfo, VideoStatus } from "./types";
 
 type VideoRow = {
@@ -18,6 +19,7 @@ type VideoRow = {
   thumbnail: string | null;
   status: VideoStatus;
   done_at: string | null;
+  reaction_script: ReactionScript | null;
 };
 
 type ClaimRow = {
@@ -168,6 +170,7 @@ async function buildItemsForVideos(
         thumbnail: video.thumbnail,
         status: video.status,
         doneAt: video.done_at,
+        reactionScript: video.reaction_script ?? null,
       },
       claim: {
         id: best.id,

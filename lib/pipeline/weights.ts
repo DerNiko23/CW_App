@@ -27,3 +27,12 @@ export async function loadWeights(supabase: SupabaseClient): Promise<ScoreWeight
     novelty: byKey.get("novelty") ?? DEFAULT_WEIGHTS.novelty,
   };
 }
+
+// MASTERPLAN.md §3.5 Adaptive Ranking: schreibt angepasste Gewichte zurück.
+export async function saveWeights(supabase: SupabaseClient, weights: ScoreWeights): Promise<void> {
+  const rows = Object.entries(weights).map(([key, value]) => ({ key, value }));
+  const { error } = await supabase.from("weights").upsert(rows, { onConflict: "key" });
+  if (error) {
+    throw new Error(`Gewichte konnten nicht gespeichert werden: ${error.message}`);
+  }
+}

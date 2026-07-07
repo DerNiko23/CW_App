@@ -8,6 +8,7 @@ import { ScoreBadge } from "@/components/inbox/score-badge";
 import { ConfidenceChecklist } from "@/components/inbox/confidence-checklist";
 import { StatusBadge, HandledElsewhereBadge } from "@/components/inbox/badges";
 import { ActionButtons } from "@/components/inbox/action-buttons";
+import { ReactionBuilder } from "@/components/inbox/reaction-builder";
 import { formatDate, formatTimestamp } from "@/lib/format";
 import { topicLabel } from "@/lib/inbox/constants";
 
@@ -174,6 +175,15 @@ export default async function VideoDetailPage({
           </div>
         )}
       </section>
+
+      {/* MASTERPLAN.md §3.3: Reaktions-Baukasten, nur bei Angenommen/Erledigt sichtbar. */}
+      {(video.status === "accepted" || video.status === "done") && claim.myth && (
+        <ReactionBuilder
+          videoId={video.id}
+          initialScript={video.reactionScript}
+          sources={claim.myth.sources}
+        />
+      )}
     </main>
   );
 }

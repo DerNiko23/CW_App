@@ -1,5 +1,61 @@
 # CHANGELOG
 
+## [2026-07-07] Phase 3 – Reaktions-Baukasten, Adaptive Ranking, URL-Import
+
+### Gebaut
+- **Reaktions-Baukasten** (MASTERPLAN §3.3): `lib/reaction/` generiert Hook (3 Varianten),
+  Kernargument, Analogie und CTA per Claude (Tool-Use, gleicher robuster Client wie die
+  Pipeline – dafür extrahiert nach `lib/claude/client.ts`, jetzt von Pipeline UND
+  Reaktions-Baukasten geteilt). **Quellen kommen bewusst nicht von Claude**, sondern direkt
+  aus dem bereits web-verifizierten `myths.sources_json` – keine Halluzinationsgefahr.
+  Ergebnis wird in `videos.reaction_script` (Migration `0004_reaction_scripts.sql`)
+  persistiert, damit nicht bei jedem Seitenaufruf neu generiert werden muss.
+  UI (`components/inbox/reaction-builder.tsx`): prominent auf der Detailseite (Angenommen/
+  Erledigt), jeder Teil einzeln kopierbar plus ein "Alles kopieren"-Button.
+- **Ton-Kalibrierung**: 4 Transkript-Ausschnitte von Chris als Stilreferenz
+  (`lib/reaction/styleReference.ts`), abgerufen über das bestehende Transkript-Modul aus den
+  zwei Videos, die schon fürs E-Book als Referenz dienten. Ausgewählt wegen unterschiedlicher
+  stilistischer Signale: die "dumme Ratte"-Analogie (Chris' Reframing-Technik), eine direkte/
+  provokante Passage ("das ist wie Masochismus"), persönliche Offenheit (eigene
+  Diät-/Fressattacken-Geschichte) und ein lockerer Studien-Bezug mit Alltagsbeispiel.
+- **Adaptive Ranking** (MASTERPLAN §3.5, `lib/ranking/adaptive.ts`): "Zu kleine Reichweite" /
+  "Aussage nicht klar falsch" / "Bereits behandelt" erhöhen das jeweils passende
+  Score-Gewicht (reach/confidence/novelty) leicht und renormalisieren alle 5 Gewichte auf
+  Summe 1.0, geklemmt in [0.05, 0.6] (kein Nullfaktor). "Thema uninteressant" hat keine
+  eigene Score-Komponente – stattdessen wird der gematchte Mythos nach 3 solchen
+  Ablehnungen als `covered_by_chris` markiert (nutzt die bestehende Novelty-Logik statt
+  neuer Infrastruktur). 7 Unit-Tests für die Renormalisierung.
+- **Manueller URL-Import** (MASTERPLAN §5): UI-Formular auf der Inbox
+  (`components/inbox/url-import-form.tsx`), ruft die bereits aus Phase 1 bestehende
+  `/api/pipeline/import`-Route auf; bei Erfolg Redirect zur Detailseite, bei Skip/Fehler
+  Inline-Meldung.
+
+### Live-Test: Reaktions-Baukasten mit 2 echten Videos
+1. **"Das vergessene Heilmittel Honig..."** (Honig-Mythos) → Hooks u. a. "Honig ist gesünder
+   als Zucker, oder? Sorry, aber das ist einer der hartnäckigsten Mythen..."; Analogie:
+   SUV-Vergleich ("Ich fahre nicht mit dem SUV in die Stadt, sondern mit dem etwas kleineren
+   SUV...").
+2. **"Die späten Abendessen füllen die Särge..."** (Kohlenhydrate-nach-18-Uhr-Mythos) →
+   Hooks u. a. "...müsste dein Körper ja quasi eine innere Uhr haben, die um Punkt sechs auf
+   'Fettspeicher-Modus' umschaltet. Spoiler: Die hat er nicht."; Analogie: Auto/Tankstelle
+   nachts vs. tagsüber.
+
+Beide live über die UI verifiziert (Generieren-Button, Kopieren-Buttons inkl.
+Clipboard-Inhalt geprüft, Mobile-Viewport), nicht nur per Script.
+
+### Entschieden
+- Claude-API-Client aus `lib/pipeline/claude.ts` nach `lib/claude/client.ts` extrahiert,
+  damit der Reaktions-Baukasten dieselbe robuste Tool-Use-Logik nutzt statt sie zu
+  duplizieren.
+- Adaptive Ranking bewusst nur auf die 3 Reject-Gründe angewendet, die sich ehrlich auf eine
+  bestehende Score-Komponente abbilden lassen. "Thema uninteressant" hätte laut
+  MASTERPLAN-Beispiel ("Keto-Themen sinken im Ranking") einen Per-Kategorie-Mechanismus
+  gebraucht, den die `weights`-Tabelle (nur 5 globale Keys) nicht hergibt – statt dafür neue
+  Schema-Komplexität einzuführen, wird die bestehende `covered_by_chris`/Novelty-Logik
+  wiederverwendet, die denselben Effekt (sinkender Score für den Mythos) erzielt.
+
+---
+
 ## [2026-07-07] Phase 2 – Inbox + Detailansicht gebaut, live getestet
 
 ### Gebaut
