@@ -1,5 +1,34 @@
 # CHANGELOG
 
+## [2026-07-07] Kritischer Fix: Detailseite blieb auf Production im Lade-Skeleton hängen
+
+Auf Nutzer-Hinweis hin gezielt gegen die echte Production-URL getestet (nicht nur Dev-Server):
+direkte URL-Navigation zur Detailseite + mehrfacher Hard-Reload in einem echten Chrome-Browser
+gegen `cw-app-eosin.vercel.app`. Ergebnis: **2 von 3 Hard-Reloads blieben dauerhaft im
+Lade-Skeleton hängen** (auch nach 15+ Sekunden Wartezeit) – der echte Inhalt war im HTML
+vorhanden, aber unsichtbar in einem `<div hidden>` gefangen. Die Inbox-Seite lief im selben
+Test 4/4 fehlerfrei durch.
+
+**Root Cause:** identisches Muster zum bereits in Phase 2 diagnostizierten Bug (siehe
+"[2026-07-06] Phase 2"-Eintrag unten) – eine im Testbrowser installierte Antiviren-Erweiterung
+(Bitdefender) injiziert per MutationObserver DOM-Attribute (`bis_skin_checked`), bevor Reacts
+Streaming-Suspense-Reveal-Script laufen kann, und gewinnt manchmal das Rennen. Für die Inbox
+wurde das damals gefixt (inneres Suspense entfernt, Daten direkt awaited); `app/videos/[id]`
+hatte aber weiterhin ein `loading.tsx`, das Next.js automatisch in eine route-weite
+Suspense-Grenze verpackt – dieselbe Angriffsfläche, nie behoben, weil nie mit Hard-Reload
+gegen die echte Production-URL getestet (nur Dev-Server + Klick-Navigation).
+
+**Fix:** `app/videos/[id]/loading.tsx` entfernt. Die Seite ist bereits `force-dynamic` und
+awaitet ihre Daten direkt (kein eigenes internes Suspense) – ohne `loading.tsx` gibt es keine
+route-weite Suspense-Grenze mehr, die Navigation blockiert bis die Seite fertig ist statt einen
+Fallback zu streamen, der hängen bleiben kann. Bei den bisherigen Ladezeiten (~300–900 ms) kein
+spürbarer Nachteil. Lokal verifiziert: `sectionCount` bleibt nach mehreren Reloads konstant bei
+3 (keine doppelten Skeleton-/Real-Sections mehr im DOM). Build/Lint sauber.
+
+**Nicht angefasst:** `app/loading.tsx` (Inbox) bleibt bestehen – 4/4 Hard-Reloads liefen dort
+im selben Production-Test fehlerfrei, kein akuter Handlungsbedarf. Falls das Muster dort
+künftig doch auftritt, gleicher Fix (Datei entfernen) anwendbar.
+
 ## [2026-07-07] Design-Redesign: weg vom "KI-generiert"-Look (Design-Richtung C)
 
 Reiner visueller Redesign-Pass über alle 3 Views (Inbox, Detailansicht, Reaktions-Baukasten),
