@@ -7,9 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-display);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-display);
+  --font-serif: var(--font-editorial);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -27,6 +28,9 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -48,39 +52,44 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Design-Richtung B (konsistent mit dem E-Book, MASTERPLAN.md §8): warmes
+   Off-White, Charcoal, Amber-Akzent statt Standard-shadcn-Neutralgrau. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: oklch(0.976 0.012 82);
+  --foreground: oklch(0.205 0.018 50);
+  --card: oklch(0.992 0.007 82);
+  --card-foreground: oklch(0.205 0.018 50);
+  --popover: oklch(0.992 0.007 82);
+  --popover-foreground: oklch(0.205 0.018 50);
+  --primary: oklch(0.205 0.018 50);
+  --primary-foreground: oklch(0.976 0.012 82);
+  --secondary: oklch(0.91 0.022 76);
+  --secondary-foreground: oklch(0.205 0.018 50);
+  --muted: oklch(0.928 0.018 80);
+  --muted-foreground: oklch(0.475 0.025 55);
+  --accent: oklch(0.74 0.152 71);
+  --accent-foreground: oklch(0.22 0.03 50);
+  --destructive: oklch(0.522 0.16 32);
+  --destructive-foreground: oklch(0.976 0.012 82);
+  --success: oklch(0.475 0.085 149);
+  --success-foreground: oklch(0.976 0.012 82);
+  --border: oklch(0.872 0.02 75);
+  --input: oklch(0.872 0.02 75);
+  --ring: oklch(0.74 0.152 71);
+  --chart-1: oklch(0.74 0.152 71);
+  --chart-2: oklch(0.522 0.16 32);
+  --chart-3: oklch(0.475 0.085 149);
+  --chart-4: oklch(0.475 0.025 55);
+  --chart-5: oklch(0.35 0.02 55);
+  --radius: 0.85rem;
+  --sidebar: oklch(0.96 0.014 82);
+  --sidebar-foreground: oklch(0.205 0.018 50);
+  --sidebar-primary: oklch(0.205 0.018 50);
+  --sidebar-primary-foreground: oklch(0.976 0.012 82);
+  --sidebar-accent: oklch(0.91 0.022 76);
+  --sidebar-accent-foreground: oklch(0.205 0.018 50);
+  --sidebar-border: oklch(0.872 0.02 75);
+  --sidebar-ring: oklch(0.74 0.152 71);
 }
 
 .dark {
@@ -122,7 +131,28 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground relative;
+    background-image: radial-gradient(
+        ellipse 70% 45% at 15% -8%,
+        oklch(0.85 0.07 74 / 45%),
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 60% 40% at 100% 0%,
+        oklch(0.78 0.09 70 / 30%),
+        transparent 65%
+      );
+    background-attachment: fixed;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   html {
     @apply font-sans;

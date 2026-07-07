@@ -19,12 +19,12 @@
 - [x] **End-to-End-Test mit echten YouTube-Videos** – mehrere Discovery-Läufe gegen die echte YouTube-/Claude-/Supabase-Infrastruktur, siehe CHANGELOG für Details und gefundene/gefixte Bugs. 39 Videos, 92 Claims (37 gematcht), inkl. korrektem Skip+Log (no_transcript/off_topic/no_claims) und Confidence-Threshold-Wirkung in echten Daten beobachtet.
 
 ## UI (Phase 2–3)
-- [ ] Inbox-Liste mit Filtern
-- [ ] Accept/Reject + Quick-Reasons
-- [ ] Detailseite (3 Blöcke: Aussage / Warum jetzt / Confidence)
+- [x] Inbox-Liste mit Filtern (Plattform/Thema/Score-Bereich/Status als URL-Params) – `app/page.tsx`, `components/inbox/filter-bar.tsx`
+- [x] Accept/Reject + Quick-Reasons – `app/actions.ts`, `components/inbox/action-buttons.tsx`, Popover mit den 4 Gründen aus MASTERPLAN §3.1
+- [x] Detailseite (3 Blöcke: Aussage / Warum jetzt / Confidence) – `app/videos/[id]/page.tsx`
 - [ ] Reaktions-Baukasten
-- [ ] Manueller URL-Import
-- [ ] Status-Flow + "Bereits behandelt"-Badge
+- [ ] Manueller URL-Import (Pipeline-Funktion existiert bereits: `lib/pipeline/import.ts` + `app/api/pipeline/import`; UI-Formular dafür fehlt noch)
+- [x] Status-Flow (Neu→Angenommen→Erledigt) + "Bereits behandelt"-Badge – live mit echten Daten getestet (siehe CHANGELOG)
 - [ ] Liste von Chris' ~20 bekanntesten Mythen-Videos recherchieren und in `myths.covered_by_chris` pflegen
 
 ## Abschluss (Phase 4–5)

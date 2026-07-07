@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test lib/pipeline/*.test.ts",
+    "test": "tsx --test lib/pipeline/*.test.ts lib/inbox/*.test.ts",
     "pipeline:test": "tsx scripts/test-pipeline.ts"
   },
   "dependencies": {

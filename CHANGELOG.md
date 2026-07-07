@@ -1,5 +1,80 @@
 # CHANGELOG
 
+## [2026-07-07] Phase 2 – Inbox + Detailansicht gebaut, live getestet
+
+### Gebaut
+- Design-System auf Design-Richtung B umgestellt (warmes Off-White, Charcoal, Amber-Akzent,
+  Space Grotesk + Newsreader) statt Standard-shadcn-Neutralgrau – konsistent mit der
+  E-Book-Richtung (MASTERPLAN.md §8). `app/globals.css`, `app/layout.tsx`.
+- Inbox (`app/page.tsx`): Karten mit Thumbnail, Zitat (Serif-Pull-Quote), Score-Badge,
+  Confidence-Prozent, Filter nach Status/Plattform/Thema/Score-Bereich als URL-Params
+  (`components/inbox/filter-bar.tsx`), sortiert nach Opportunity Score absteigend.
+- Detailseite (`app/videos/[id]/page.tsx`): die 3 Blöcke aus MASTERPLAN §3.2 – Falschaussage
+  + Timestamp-Link ins Original, "Warum jetzt reagieren?" mit Score-Bullets
+  (`lib/inbox/scoreBullets.ts`, 4 Unit-Tests), Confidence-Checkliste
+  (`components/inbox/confidence-checklist.tsx`) inkl. Mythos-Verdict + Quellen.
+- Accept/Reject mit den 4 Quick-Reasons aus MASTERPLAN §3.1 (Popover), Status-Flow
+  Neu→Angenommen→Erledigt, "Bereits behandelt"-Badge (Duplicate-Schutz) – Server Actions in
+  `app/actions.ts`, UI in `components/inbox/action-buttons.tsx`.
+- Datenschicht `lib/inbox/queries.ts`: lädt Videos+Claims+Myths+Snapshots+Weights, berechnet
+  Score/Novelty pro Video mit den bestehenden `lib/pipeline`-Funktionen (kein Duplicate-Code
+  zwischen Pipeline und UI).
+- Alle Seiten mit den echten 39 Videos/92 Claims aus den Pipeline-Testläufen verifiziert,
+  keine künstlichen Platzhalter.
+- **Nachtrag:** `CLAUDE.md` bestätigt explizit die schon in ROADMAP.md stehende Regel
+  "Confidence < 70 % kommt NICHT in die Inbox" – beim Bauen zunächst nur angezeigt, nicht
+  gefiltert. Nachträglich in `lib/inbox/queries.ts` gefixt: Filter gilt nur für die
+  "Neu"-Warteschlange (Status-Filter "Alle" zeigt weiterhin alles, zur Transparenz/Debugging).
+  Live verifiziert: Default-Ansicht zeigte vorher u. a. eine Karte mit 50 % Confidence,
+  danach korrekt ausgeblendet (24 statt 36 "Neu"-Karten), unter "Alle" weiterhin sichtbar.
+
+### Live-Test (echter Dev-Server, Basic-Auth-geschützt, reale DB)
+Accept-, Reject-mit-Grund- und Erledigt-Flow einzeln gegen die echte Datenbank verifiziert
+(DB-Zustand nach jedem Klick direkt geprüft, nicht nur UI-Optik). "Bereits behandelt"-Badge
+gezielt getestet: zwei Videos teilen sich denselben gematchten Mythos
+("Kohlenhydrate nach 18 Uhr..."); nach "Erledigt" auf dem einen zeigt das andere korrekt den
+Badge, den entsprechenden Bullet-Text und einen niedrigeren Score (Novelty-Faktor sinkt auf 0).
+Filter (Status/Thema/Score-Bereich) korrekt kombinierbar getestet. Mobile-Viewport (390×844)
+für Inbox und Detailseite geprüft: kein horizontales Overflow, Filter-Zeile und Karten-Layout
+bleiben lesbar (Fenster-Resize funktionierte im Testcontainer nicht zuverlässig, daher
+Verifikation über ein same-origin `<iframe>` mit eigenem CSS-Viewport statt echtem
+Browser-Resize).
+
+### Gefundener Bug (Testartefakt, kein Produktionscode-Fehler)
+Ein wiederholtes React-Hydration-Warning im Dev-Overlay entpuppte sich als Fehlalarm einer
+im Testbrowser installierten Antiviren-Erweiterung (Bitdefender; injiziert `bis_skin_checked`/
+`bis_register`-Attribute vor dem React-Hydration). Zur Absicherung trotzdem ein reales
+Robustheits-Problem behoben: `app/page.tsx` nutzte einen Suspense-Fallback für die Video-Liste;
+wenn das Reveal-Script eines gestreamten Suspense-Boundary durch eine Browser-Erweiterung
+blockiert wird, bleibt der Inhalt dauerhaft in einem `hidden`-Container hängen (0×0, keine
+Bilder laden). Fix: Suspense entfernt, Seite awaited die Daten direkt – für eine Inbox mit
+~40 Zeilen ohnehin kein spürbarer Performance-Nachteil, aber robuster gegenüber Erweiterungen,
+die Chris in seinem echten Browser installiert haben könnte.
+
+### Entschieden
+- Farbpalette/Fonts bewusst identisch zur E-Book-Richtung übernommen statt neu erfunden
+  (MASTERPLAN §8 fordert Konsistenz) – Weiterverwendung eines bereits getroffenen,
+  dokumentierten Entscheids ist hier die richtige Wahl, keine Bequemlichkeit.
+  Serif (Newsreader) bewusst nur für Zitate/Editorial-Text, Space Grotesk für UI/Zahlen.
+  Confidence-/Score-Badges nutzen Intensitätsstufen der Markenfarbe statt generischem
+  Ampel-Rot/Gelb/Grün.
+  Oberhalb der ersten Bildschirmseite liegende Thumbnails erhalten `priority` (echter
+  Next.js-Performance-Vorteil für LCP, kein reiner Test-Workaround).
+- Bilder oberhalb des ersten Bildschirms (erste 3 Karten, Detail-Hero) laden mit `priority`;
+  der Rest bleibt nativ lazy – Standard-Next.js-Empfehlung für LCP, unabhängig vom oben
+  genannten Testartefakt.
+- Discovery-Cron (`app/api/cron/discover`) bleibt bewusst manuell (nicht in `vercel.json`),
+  bis Phase 2 steht und der User die laufenden API-Kosten bewusst freigibt.
+- Keine "Zurücksetzen auf Neu"-Aktion für Angenommen/Erledigt/Abgelehnt gebaut – nicht
+  angefragt, hätte Scope unnötig vergrößert.
+
+### Bekannter Zustand
+- Aus den Live-Tests sind 2 Videos jetzt `accepted`/`done` und 1 Video `rejected` (echte,
+  korrekte Beispiele des Status-Flows, kein Testmüll) – kann vor der Phase-4-Demo-Kuratierung
+  bei Bedarf in Supabase zurückgesetzt werden.
+
+---
+
 ## [2026-07-06] Phase 1 – Discovery-Pipeline live getestet, 2 Bugs gefixt
 
 ### Live-Test-Ergebnis (echte YouTube-/Claude-/Supabase-Infrastruktur)

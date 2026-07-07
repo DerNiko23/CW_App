@@ -49,6 +49,26 @@ Antworten, v. a. bei der Normalisierung mit ihrer langen Mythen-Liste im Prompt)
 
 Alle drei Prompts stehen im Volltext in `lib/pipeline/claude.ts`.
 
+## Inbox & Detailansicht (`app/page.tsx`, `app/videos/[id]/page.tsx`)
+
+Beide Seiten sind reine Server Components, die `lib/inbox/queries.ts` aufrufen – diese lädt
+Videos/Claims/Myths/Snapshots/Weights und berechnet Score/Novelty pro Video mit denselben
+`lib/pipeline`-Funktionen, die auch die Pipeline nutzt (kein doppelter Score-Code).
+
+- **Filter** (Status/Plattform/Thema/Score-Bereich) sind URL-Query-Params
+  (`components/inbox/filter-bar.tsx`), damit die Inbox serverseitig gerendert und dennoch
+  linkbar/bookmarkbar bleibt.
+- **Confidence < 70 %** wird aus der Standard-"Neu"-Warteschlange gefiltert (CLAUDE.md, ROADMAP.md-Risiko
+  "False Positives sind der teuerste Fehler"), bleibt aber über den Status-Filter "Alle"
+  einsehbar – nicht komplett versteckt, nur nicht in der aktiven Queue.
+- **Accept/Reject/Erledigt** sind Server Actions (`app/actions.ts`), aufgerufen aus
+  `components/inbox/action-buttons.tsx`; schreiben `videos.status` + `feedback`-Tabelle.
+- **"Bereits behandelt"**: ein Video gilt als behandelt, wenn ein *anderes* Video mit
+  demselben `myth_id` bereits `status = done` ist, oder wenn `myths.covered_by_chris` gesetzt
+  ist (`lib/pipeline/novelty.ts`, bereits aus der Pipeline vorhanden).
+- **Design**: eigene Farbpalette (warmes Off-White/Charcoal/Amber, konsistent mit der
+  E-Book-Richtung) statt Standard-shadcn-Grau, siehe `app/globals.css`.
+
 ## Prinzipien
 - **"Würde Chris das morgen früh tatsächlich benutzen?"** – sonst streichen.
 - Demo-First: erster Eindruck darf nie von leerer Liste oder Ladezeit abhängen.
