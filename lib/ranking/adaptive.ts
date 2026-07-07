@@ -57,8 +57,12 @@ async function findBestClaimMythId(
 }
 
 // "Thema uninteressant" hat keine eigene Score-Gewicht-Komponente. Stattdessen: wenn
-// derselbe Mythos oft genug aus diesem Grund abgelehnt wird, gilt er als abgedeckt -
-// nutzt die bestehende Novelty-Logik (myths.covered_by_chris) statt neuer Infrastruktur.
+// derselbe Mythos oft genug aus diesem Grund abgelehnt wird, senkt `topic_deprioritized`
+// seine Novelty genau wie `covered_by_chris` (nutzt die bestehende Novelty-Logik statt
+// neuer Infrastruktur) - ABER es ist eine eigene Spalte, weil "uninteressant" NICHT
+// "von Chris behandelt" bedeutet. Wuerde man hier `covered_by_chris` setzen, wuerde die UI
+// (lib/inbox/scoreBullets.ts) faelschlich "bereits behandelt" anzeigen, obwohl Chris den
+// Mythos nie in einem Video aufgegriffen hat.
 async function suppressMythIfRepeatedlyUninteresting(
   supabase: SupabaseClient,
   videoId: string,
@@ -74,14 +78,19 @@ async function suppressMythIfRepeatedlyUninteresting(
   const rejectedVideoIds = (rejections ?? []).map((r) => r.video_id as string);
   if (rejectedVideoIds.length === 0) return;
 
-  const { count } = await supabase
+  // Distinkte Videos zaehlen, nicht Claim-Zeilen - ein Video mit mehreren Claims zum
+  // selben Mythos darf nicht mehrfach zum Schwellenwert beitragen.
+  const { data: matchingClaims } = await supabase
     .from("claims")
-    .select("video_id", { count: "exact", head: true })
+    .select("video_id")
     .eq("myth_id", mythId)
     .in("video_id", rejectedVideoIds);
+  const distinctRejectedVideoCount = new Set(
+    (matchingClaims ?? []).map((c) => c.video_id as string),
+  ).size;
 
-  if ((count ?? 0) >= TOPIC_DISINTEREST_THRESHOLD) {
-    await supabase.from("myths").update({ covered_by_chris: true }).eq("id", mythId);
+  if (distinctRejectedVideoCount >= TOPIC_DISINTEREST_THRESHOLD) {
+    await supabase.from("myths").update({ topic_deprioritized: true }).eq("id", mythId);
   }
 }
 

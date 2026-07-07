@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { addQuotaUsage, YOUTUBE_VIDEOS_LIST_COST } from "@/lib/pipeline/quota";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,9 @@ export async function GET(request: NextRequest) {
       skipped += batch.length;
       continue;
     }
+    // CLAUDE.md: YouTube-Quota-Verbrauch in youtube_quota_usage tracken - auch fuer den
+    // taeglichen Snapshot-Cron, nicht nur fuer Discovery (videos.list = 1 Unit/Aufruf).
+    await addQuotaUsage(supabase, YOUTUBE_VIDEOS_LIST_COST);
 
     const statsByExternalId = new Map(
       (json.items ?? []).map((item) => [item.id, item.statistics]),

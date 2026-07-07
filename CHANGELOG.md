@@ -1,5 +1,150 @@
 # CHANGELOG
 
+## [2026-07-07] Bekanntes, ungeklärtes Problem: Reaktions-Baukasten-Fehler (Nutzer-Report)
+
+Nutzer-Report: Klick auf "Skript generieren" im Reaktions-Baukasten liefert
+"An error occurred in the Server Components render. The specific message is omitted in
+production builds..." - das ist Next.js' generische Fehlermeldung für einen Production-Build
+(erscheint so nie im Dev-Server).
+
+**Untersucht, aber nicht reproduziert:**
+- `generateAndSaveReactionScript` (die Kernfunktion hinter dem Button) direkt aufgerufen
+  (Honig-Video, 751f599d) - lief erfolgreich durch, erzeugte ein brauchbares Skript und
+  speicherte es korrekt in der DB.
+- Lokal einen echten Production-Build getestet (`npm run build && npm start`, Port 3001) und
+  dieselbe Detailseite abgerufen - kein Fehler, Seite rendert korrekt.
+- Die Browser-Preview-Session in diesem Chat war zu dem Zeitpunkt bereits unzuverlässig
+  (Screenshots liefen in Timeouts, `getBoundingClientRect` lieferte durchgehend Nullen) - ein
+  UI-Klick-Test war daher nicht aussagekräftig und wurde nicht als Beleg gewertet.
+
+**Naheliegendste Erklärung:** Der Fehler wurde vermutlich auf dem **deployten Vercel-Stand**
+beobachtet, der zum Zeitpunkt des Reports noch auf dem alten Phase-3-Commit lief (nichts aus
+dieser Session war bis dahin gepusht) - z. B. durch eine fehlende/abweichende
+`ANTHROPIC_API_KEY`-Umgebungsvariable auf Vercel, oder einen dort noch vorhandenen älteren Bug.
+Mit diesem Push läuft auf Vercel erstmals der aktuelle Code inkl. aller heutigen Fixes.
+
+**Nächster Schritt:** Nach diesem Deploy auf der echten Vercel-URL erneut "Skript generieren"
+testen. Falls der Fehler weiterhin auftritt: Vercel-Function-Logs (Dashboard -> Deployment ->
+Functions -> Logs) prüfen - dort steht die volle, nicht redigierte Fehlermeldung, anders als im
+Browser. Siehe auch TASKS.md.
+
+## [2026-07-07] Code-Review über die gesamte Projekthistorie (Commit 2cf8ed6 bis heute)
+
+8 unabhängige Review-Durchgänge (Korrektheit, Reuse, Vereinfachung, Effizienz, Architektur,
+CLAUDE.md-Konformität) über den kompletten Diff seit Projektstart, jeweils gegen den echten
+aktuellen Code gegengeprüft. Gefixt:
+
+- **`proxy.ts`**: Basic-Auth-Parsing hat `user:passwort` naiv an *jedem* `:` gesplittet - ein
+  Passwort mit Doppelpunkt wäre lautlos abgeschnitten und die Anmeldung permanent fehlgeschlagen.
+  Jetzt wird nur am ersten `:` getrennt.
+- **`lib/ranking/adaptive.ts`**: `suppressMythIfRepeatedlyUninteresting` zählte Claim-*Zeilen*
+  statt distinkter Video-IDs für den 3er-Schwellenwert - ein Video mit zwei Claims zum selben
+  Mythos hätte allein für 2 der nötigen 3 Ablehnungen gezählt. Zählt jetzt distinkte Videos.
+- **`app/api/cron/snapshot/route.ts`**: verbrauchte YouTube-Quota (videos.list) ohne sie in
+  `youtube_quota_usage` zu tracken - Verstoß gegen die CLAUDE.md-Regel "Verbrauch tracken".
+  Praktisch geringe Auswirkung (1 Unit/Aufruf), aber jetzt korrekt erfasst.
+- **`lib/inbox/queries.ts`**: die Done-Claims-Abfrage (Duplicate-Schutz) lud bei jedem
+  Seitenaufruf *alle* erledigten Claims der gesamten DB statt nur die zu den auf der Seite
+  relevanten Mythen - wächst unbegrenzt mit der Feedback-Historie. Jetzt auf die aktuell
+  relevanten `mythIds` gescoped (gleiche Umstellung machte die Myths-Abfrage nebenbei auch
+  robuster gegen unnötige Vollzugriffe).
+- **`app/api/export/route.ts`**: rief für "Angenommen" und "Erledigt" zwei komplett getrennte
+  `getInboxItems`-Durchläufe auf (inkl. doppeltem Laden von Weights/Myths/Done-Claims).
+  `getInboxItems`/`InboxFilters.status` akzeptiert jetzt auch ein Array, ein Aufruf reicht.
+  Zusätzlich: `statusLabel()` duplizierte `STATUS_LABEL` aus `components/inbox/badges.tsx` -
+  jetzt von dort importiert (exportiert), eine Quelle der Wahrheit.
+- **`lib/pipeline/novelty.ts`**: `topic_deprioritized` war optional typisiert, obwohl beide
+  echten Aufrufer es immer mitgeben (die DB-Spalte ist `NOT NULL`) - jetzt required, verhindert
+  dass ein zukünftiger Aufrufer es versehentlich weglässt und `undefined` fälschlich als
+  "false" durchrutscht.
+
+**Bewusst nicht gefixt** (Begründung statt Diskussion):
+- `lib/pipeline/quota.ts`s `addQuotaUsage` (Read-then-Write, keine atomare Erhöhung) - reale
+  Race Condition bei echt gleichzeitigen Cron-/manuellen Discovery-Läufen, aber ein sauberer
+  Fix bräuchte eine neue Postgres-Funktion + Migration - außerhalb des Scopes dieses Durchgangs.
+- `lib/pipeline/discovery.ts`s sequenzielle YouTube-/Claude-Aufrufe in Schleifen - echtes
+  Effizienzpotenzial, aber eine Parallelisierung der Kern-Pipeline ohne dedizierten Test bringt
+  Regressionsrisiko, das den Zeitgewinn für dieses Projekt nicht rechtfertigt.
+- Zwei Kandidaten wurden nach eigener Prüfung des tatsächlichen Codes **verworfen** (nicht
+  bestätigt): ein vermuteter Double-Submit-Race in `action-buttons.tsx` (Accept/Reject teilen
+  sich denselben `isPending`-State aus demselben `useTransition()`-Hook, kein Race möglich) und
+  eine vermutete Doppel-`<main>`-Regression in `error.tsx`/`not-found.tsx` (beide sind volle
+  Seiten-Ersetzungen ohne Suspense-Fallback-Race, anders als `loading.tsx` - die CHANGELOG-
+  Formulierung dazu war nur zu ungenau, jetzt präzisiert).
+
+## [2026-07-07] Phase 4 – Bug-Fix "bereits behandelt", Kuration, Export, Polish
+
+### Kuration der Demo-Inbox (13 statt 15–20 Fundstücke)
+Beim Kuratieren der 39 vorhandenen Videos fiel auf: die Discovery-Suchqueries sind die
+Mythen-Namen selbst (z. B. "keine Kohlenhydrate nach 18 Uhr"), das findet strukturell sowohl
+Videos, die den Mythos verbreiten, als auch Fakten-Check-/Debunking-Kanäle zum selben
+Suchbegriff. Bei manueller Prüfung jedes 100%-Confidence-Matches (Zitat, bei Grenzfällen
+Volltranskript) stellte sich heraus, dass ein erheblicher Teil der automatisch gematchten
+Videos neutrale, bereits korrekte oder sogar explizit entkräftende Aussagen enthält (z. B.
+Ärzte-Kanäle, die Honig sachlich einordnen, oder Reissirup/"Christian Wolf"-Reaktionsvideos)
+statt der Falschaussage selbst - ein Video war sogar eine Stand-up-Comedy-Nummer.
+
+**Reaktion (mit Rücksprache):** zusätzlicher, gezielter Discovery-Lauf mit neuen,
+assertions-artig formulierten Suchqueries ("Honig macht nicht dick" statt "...Mythos") statt
+der bisherigen Mythos-/Frage-Formulierungen, die vor allem Fakten-Checker antriggern. Fand
+deutlich mehr echte Treffer (707/10.000 Units verbraucht). Nach Prüfung aller Kandidaten:
+**42 Videos** per direktem DB-Update auf `rejected` gesetzt (mit ehrlichem, individuell
+geprüftem Grund je Video - "Aussage nicht klar falsch" für neutrale/entkräftende/ironische
+Treffer, "Zu kleine Reichweite" für Videos mit sehr wenig Views), bewusst **nicht** über
+`applyAdaptiveRanking` (das wäre redaktionelle Bereinigung, keine organische Nutzung -
+`weights` bleiben bei den Defaults). Darunter 2 zuvor fälschlich "Angenommene" Videos
+(Test-Session-Artefakte, keine echte Redaktionsentscheidung) und Chris' eigenes YouTube-Video
+zum Datteln-Mythos (jetzt `myths.covered_by_chris = true` + `chris_video_url` gesetzt - damit
+ein echter, belegter Teil des offenen "~20 Mythen-Videos"-Tasks erledigt). Bei einem Video
+(751f599d, "Honig kann beim Abnehmen helfen!") wurde das gespeicherte Zitat gegen einen
+klareren, ebenfalls verbatim im Transkript geprüften Satz aus demselben Video ausgetauscht.
+
+**Ergebnis:** 10 Videos in "Neu" (Score 46–73, Confidence ≥70%), 1 "Angenommen", 2 "Erledigt"
+– macht 13 statt der geplanten 15–20. Bewusst nicht mit schwächeren/mehrdeutigen Funden auf
+20 aufgefüllt (Prinzip: keine Ironie-Erkennung, False Positives sind der teuerste Fehler).
+Zwei der 10 zeigen `alreadyHandledElsewhere=true` (Duplicate-Schutz live sichtbar: derselbe
+Mythos wurde bereits in einem "Erledigt"-Video behandelt) - gutes Demo-Material für den Loom.
+Die Score-Spanne deckt "Mittlere" bis "Hohe Priorität" ab, nicht "Sehr hohe" (80+) oder
+"Niedrige" (<40) - dafür hätte ein Video mit Multi-Millionen-Views UND klarer Falschaussage
+gefunden werden müssen; solche Kombination kam in diesem Themenfeld nicht vor.
+
+### Design-Polish
+`app/loading.tsx` (Karten-Skeleton) und `app/videos/[id]/loading.tsx` (Block-Skeleton) sowie
+`app/error.tsx` (freundlicher Fehlertext + Retry) und `app/videos/[id]/not-found.tsx` neu -
+vorher gab es keinen eigenen Loading-/Error-State, nur `force-dynamic`. Karten in der Inbox
+bekommen ein dezentes, gestaffeltes Fade-in (`tw-animate-css`, keine neue Dependency).
+
+**Live gefundener und gefixter Bug beim Bauen:** Sowohl `loading.tsx` als auch die echte Seite
+rendern ein `<main>` - bei einer echten Hard-Navigation (Streaming-SSR, `force-dynamic`) blieb
+das leere Fallback-`<main>` nach dem Swap als Geisterelement im DOM (per `preview_eval` live
+nachgestellt: `document.querySelectorAll('main').length` war 2 statt 1). Kein sichtbarer
+visueller Fehler, aber ungültiges Markup (zwei "main"-Landmarks verwirren Screenreader) und ein
+Fussabdruck fuer jeden Code, der `document.querySelector('main')` erwartet. Betrifft nur die
+beiden `loading.tsx`-Dateien (echte Suspense-Fallbacks, die neben der echten Seite existieren
+koennen) - `error.tsx`/`not-found.tsx` sind volle Seiten-Ersetzungen ohne diese Race und
+behalten bewusst ihr eigenes `<main>`. Fix: beide `loading.tsx` rendern jetzt `<div>` statt
+`<main>` - pro Seite existiert dadurch garantiert genau eine `<main>`-Landmark.
+
+**Live geprüft:** Mobile-Viewport 375px (kein horizontales Overflow, Inbox + Detailseite +
+Export-Links + Not-Found), Ladezeit Inbox 296–884ms (Ziel < 1,5 s laut ROADMAP, deutlich
+unterschritten), leerer Filter-Zustand, Not-Found-Seite.
+
+### Gefundener Bug (vor Live-Auswirkung gefixt)
+Nutzer-Hinweis: Wenn ein Mythos durch 3x Reject mit Grund "Thema uninteressant" als
+`covered_by_chris=true` markiert wird (`suppressMythIfRepeatedlyUninteresting` in
+`lib/ranking/adaptive.ts`), hätte die Detailseite fälschlich "Dieser Mythos wurde bereits
+behandelt (Duplicate-Schutz)" angezeigt (`lib/inbox/scoreBullets.ts`) - obwohl Chris den Mythos
+nie in einem eigenen Video aufgegriffen hat, sondern ihn nur wiederholt als uninteressant
+abgelehnt hat. Die Karten-/Detail-Badge (`HandledElsewhereBadge`) war davon nicht betroffen (hängt
+korrekt nur an einem echten `status=done`-Video), aber der Score-Bullet-Text auf der Detailseite
+verwechselte beide Faelle. Root Cause: `covered_by_chris` wurde fuer zwei verschiedene Bedeutungen
+wiederverwendet. Fix: neue Spalte `myths.topic_deprioritized` (Migration `0005`) trennt "Chris hat
+das Thema abgelehnt" von "Chris hat dazu schon ein Video". Die Score-Absenkung (Novelty-Faktor)
+bleibt fuer beide Faelle identisch zu vorher (`isMythNovel` prueft jetzt
+`covered_by_chris OR topic_deprioritized`) - nur die Anzeige unterscheidet jetzt ehrlich. In der
+Live-DB war noch kein Mythos betroffen (keine 3 "Thema uninteressant"-Rejects zum selben Mythos
+bisher), der Bug war also latent, nicht bereits sichtbar.
+
 ## [2026-07-07] Phase 3 – Reaktions-Baukasten, Adaptive Ranking, URL-Import
 
 ### Gebaut

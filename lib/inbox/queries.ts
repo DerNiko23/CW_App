@@ -43,6 +43,7 @@ type MythRow = {
   verdict: string;
   sources_json: unknown;
   covered_by_chris: boolean;
+  topic_deprioritized: boolean;
 };
 
 type SnapshotRow = {
@@ -63,6 +64,7 @@ function toMythInfo(row: MythRow): MythInfo {
       ? (row.sources_json as MythInfo["sources"])
       : [],
     covered_by_chris: row.covered_by_chris,
+    topic_deprioritized: row.topic_deprioritized,
   };
 }
 
@@ -73,34 +75,41 @@ async function buildItemsForVideos(
   if (videos.length === 0) return [];
   const videoIds = videos.map((v) => v.id);
 
-  const [claimsRes, snapshotsRes, weights, doneClaimsRes] = await Promise.all([
-    supabase.from("claims").select("*").in("video_id", videoIds),
+  const claimsRes = await supabase.from("claims").select("*").in("video_id", videoIds);
+  if (claimsRes.error) throw new Error(`Claims-Abfrage fehlgeschlagen: ${claimsRes.error.message}`);
+  const claims = (claimsRes.data ?? []) as ClaimRow[];
+
+  const mythIds = Array.from(new Set(claims.map((c) => c.myth_id).filter((id): id is string => Boolean(id))));
+
+  // Done-Claims (fuer's "Bereits behandelt"-Duplicate-Schutz) und Myths auf die tatsaechlich
+  // hier vorkommenden mythIds scopen, statt jedes Mal die komplette Tabelle zu laden - waechst
+  // sonst unbegrenzt mit der Feedback-Historie, unabhaengig davon wie wenige Videos die Seite zeigt.
+  const [snapshotsRes, weights, mythsRes, doneClaimsRes] = await Promise.all([
     supabase
       .from("snapshots")
       .select("video_id, views, likes, comments, captured_at")
       .in("video_id", videoIds),
     loadWeights(supabase),
-    supabase
-      .from("claims")
-      .select("myth_id, video_id, videos!inner(status)")
-      .eq("videos.status", "done")
-      .not("myth_id", "is", null),
+    mythIds.length > 0
+      ? supabase.from("myths").select("*").in("id", mythIds)
+      : Promise.resolve({ data: [] as MythRow[], error: null }),
+    mythIds.length > 0
+      ? supabase
+          .from("claims")
+          .select("myth_id, video_id, videos!inner(status)")
+          .eq("videos.status", "done")
+          .in("myth_id", mythIds)
+      : Promise.resolve({ data: [] as unknown[], error: null }),
   ]);
 
-  if (claimsRes.error) throw new Error(`Claims-Abfrage fehlgeschlagen: ${claimsRes.error.message}`);
   if (snapshotsRes.error) throw new Error(`Snapshots-Abfrage fehlgeschlagen: ${snapshotsRes.error.message}`);
+  if (mythsRes.error) throw new Error(`Mythen-Abfrage fehlgeschlagen: ${mythsRes.error.message}`);
   if (doneClaimsRes.error) throw new Error(`Done-Claims-Abfrage fehlgeschlagen: ${doneClaimsRes.error.message}`);
 
-  const claims = (claimsRes.data ?? []) as ClaimRow[];
   const snapshots = (snapshotsRes.data ?? []) as SnapshotRow[];
-
-  const mythIds = Array.from(new Set(claims.map((c) => c.myth_id).filter((id): id is string => Boolean(id))));
-  const { data: mythRows, error: mythsError } =
-    mythIds.length > 0
-      ? await supabase.from("myths").select("*").in("id", mythIds)
-      : { data: [] as MythRow[], error: null };
-  if (mythsError) throw new Error(`Mythen-Abfrage fehlgeschlagen: ${mythsError.message}`);
-  const mythById = new Map((mythRows ?? []).map((m) => [m.id, toMythInfo(m as MythRow)]));
+  const mythById = new Map(
+    ((mythsRes.data ?? []) as MythRow[]).map((m) => [m.id, toMythInfo(m)]),
+  );
 
   const doneMythVideoIds = new Map<string, Set<string>>();
   for (const row of doneClaimsRes.data ?? []) {
@@ -149,7 +158,9 @@ async function buildItemsForVideos(
       doneVideoIdsForMyth && [...doneVideoIdsForMyth].some((id) => id !== video.id),
     );
     const isNovel = isMythNovel(
-      myth ? { covered_by_chris: myth.covered_by_chris } : null,
+      myth
+        ? { covered_by_chris: myth.covered_by_chris, topic_deprioritized: myth.topic_deprioritized }
+        : null,
       alreadyHandledElsewhere,
     );
 
@@ -221,7 +232,9 @@ export async function getInboxItems(filters: InboxFilters = {}): Promise<InboxIt
 
   let query = supabase.from("videos").select("*");
   const status = filters.status ?? "new";
-  if (status !== "all") {
+  if (Array.isArray(status)) {
+    query = query.in("status", status);
+  } else if (status !== "all") {
     query = query.eq("status", status);
   }
   if (filters.platform && filters.platform !== "all") {

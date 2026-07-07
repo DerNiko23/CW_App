@@ -10,6 +10,7 @@ export type MythInfo = {
   verdict: string;
   sources: Array<{ title: string; url: string }>;
   covered_by_chris: boolean;
+  topic_deprioritized: boolean;
 };
 
 export type ClaimInfo = {
@@ -52,5 +53,5 @@ export type InboxFilters = {
   platform?: string;
   topic?: string;
   scoreBand?: string;
-  status?: string;
+  status?: string | string[];
 };

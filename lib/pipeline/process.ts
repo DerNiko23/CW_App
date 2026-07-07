@@ -164,7 +164,10 @@ export async function processVideo(params: {
     : false;
   const isNovel = isMythNovel(
     bestClaim.matchedMyth
-      ? { covered_by_chris: bestClaim.matchedMyth.covered_by_chris }
+      ? {
+          covered_by_chris: bestClaim.matchedMyth.covered_by_chris,
+          topic_deprioritized: bestClaim.matchedMyth.topic_deprioritized,
+        }
       : null,
     doneForMyth,
   );

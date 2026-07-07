@@ -8,6 +8,7 @@ type MythRow = {
   verdict: string;
   sources_json: unknown;
   covered_by_chris: boolean;
+  topic_deprioritized: boolean;
   chris_video_url: string | null;
   search_queries: unknown;
 };
@@ -22,6 +23,7 @@ function toMyth(row: MythRow): Myth {
       ? (row.sources_json as Myth["sources_json"])
       : [],
     covered_by_chris: row.covered_by_chris,
+    topic_deprioritized: row.topic_deprioritized,
     chris_video_url: row.chris_video_url,
     search_queries: Array.isArray(row.search_queries)
       ? (row.search_queries as string[])
@@ -33,7 +35,7 @@ export async function loadMyths(supabase: SupabaseClient): Promise<Myth[]> {
   const { data, error } = await supabase
     .from("myths")
     .select(
-      "id, claim_pattern, category, verdict, sources_json, covered_by_chris, chris_video_url, search_queries",
+      "id, claim_pattern, category, verdict, sources_json, covered_by_chris, topic_deprioritized, chris_video_url, search_queries",
     );
 
   if (error) {

@@ -15,9 +15,12 @@ export function proxy(request: NextRequest) {
 
   if (authHeader?.startsWith("Basic ")) {
     const encoded = authHeader.slice("Basic ".length);
-    const [user, password] = Buffer.from(encoded, "base64")
-      .toString("utf-8")
-      .split(":");
+    const decoded = Buffer.from(encoded, "base64").toString("utf-8");
+    // Nur am ersten ":" trennen - ein Passwort mit ":" darf nicht abgeschnitten werden
+    // (naives split(":") wuerde sonst alles nach dem zweiten ":" verwerfen).
+    const separatorIndex = decoded.indexOf(":");
+    const user = decoded.slice(0, separatorIndex);
+    const password = decoded.slice(separatorIndex + 1);
 
     if (user === validUser && password === validPassword) {
       return NextResponse.next();

@@ -7,6 +7,7 @@ export type Myth = {
   verdict: string;
   sources_json: Array<{ title: string; url: string }>;
   covered_by_chris: boolean;
+  topic_deprioritized: boolean;
   chris_video_url: string | null;
   search_queries: string[];
 };

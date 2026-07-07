@@ -63,9 +63,14 @@ Videos/Claims/Myths/Snapshots/Weights und berechnet Score/Novelty pro Video mit 
   einsehbar – nicht komplett versteckt, nur nicht in der aktiven Queue.
 - **Accept/Reject/Erledigt** sind Server Actions (`app/actions.ts`), aufgerufen aus
   `components/inbox/action-buttons.tsx`; schreiben `videos.status` + `feedback`-Tabelle.
-- **"Bereits behandelt"**: ein Video gilt als behandelt, wenn ein *anderes* Video mit
-  demselben `myth_id` bereits `status = done` ist, oder wenn `myths.covered_by_chris` gesetzt
-  ist (`lib/pipeline/novelty.ts`, bereits aus der Pipeline vorhanden).
+- **"Bereits behandelt"**: die Badge zeigt nur an, wenn ein *anderes* Video mit demselben
+  `myth_id` bereits `status = done` ist. Der Opportunity-Score (Novelty-Faktor) sinkt zusätzlich,
+  wenn `myths.covered_by_chris` (manuell gepflegte Startliste) oder `myths.topic_deprioritized`
+  (Adaptive Ranking, s. u.) gesetzt ist (`lib/pipeline/novelty.ts`) - aber nur `covered_by_chris`
+  bzw. ein echtes `done`-Video lässt den Bullet-Text auf der Detailseite "bereits behandelt"
+  sagen. `topic_deprioritized` bedeutet nur "uninteressant", nicht "erledigt", und bekommt
+  deshalb einen eigenen, ehrlichen Text (`lib/inbox/scoreBullets.ts`) - sonst würde die App eine
+  Erledigung behaupten, die nie stattfand.
 - **Design**: eigene Farbpalette (warmes Off-White/Charcoal/Amber, konsistent mit der
   E-Book-Richtung) statt Standard-shadcn-Grau, siehe `app/globals.css`.
 
@@ -86,7 +91,10 @@ MASTERPLAN §3.5: Reject-Gründe passen die `weights`-Tabelle an. "Zu kleine Rei
 (reach/confidence/novelty) leicht, alle 5 Gewichte werden renormalisiert (Summe bleibt 1.0,
 kein Gewicht fällt unter 0.05 oder über 0.6). "Thema uninteressant" hat keine eigene
 Score-Komponente – stattdessen markiert die Funktion den gematchten Mythos nach 3
-Wiederholungen als `covered_by_chris` (nutzt die bestehende Novelty-Logik).
+Wiederholungen als `topic_deprioritized` (eigene Spalte, *nicht* `covered_by_chris` - "Chris
+findet das uninteressant" ist etwas anderes als "Chris hat dazu schon ein Video gemacht"; beide
+senken die Novelty gleichermaßen, aber nur Letzteres zeigt der UI als "bereits behandelt" an,
+siehe `lib/inbox/scoreBullets.ts`).
 
 ## Manueller URL-Import (`components/inbox/url-import-form.tsx`)
 

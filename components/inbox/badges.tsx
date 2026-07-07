@@ -9,7 +9,7 @@ const STATUS_STYLE: Record<VideoStatus, string> = {
   rejected: "bg-destructive/10 text-destructive border border-destructive/20",
 };
 
-const STATUS_LABEL: Record<VideoStatus, string> = {
+export const STATUS_LABEL: Record<VideoStatus, string> = {
   new: "Neu",
   accepted: "Angenommen",
   done: "Erledigt",
