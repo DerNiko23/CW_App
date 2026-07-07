@@ -1,36 +1,25 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { isValidSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 
 // Next.js 16 renamed `middleware` to `proxy` (same mechanism, new name/file).
-export function proxy(request: NextRequest) {
-  const validUser = process.env.AUTH_USERNAME;
+export async function proxy(request: NextRequest) {
   const validPassword = process.env.AUTH_PASSWORD;
-
-  if (!validUser || !validPassword) {
-    console.error("AUTH_USERNAME/AUTH_PASSWORD not configured");
+  if (!validPassword) {
+    console.error("AUTH_PASSWORD not configured");
     return new NextResponse("Server misconfigured", { status: 500 });
   }
 
-  const authHeader = request.headers.get("authorization");
-
-  if (authHeader?.startsWith("Basic ")) {
-    const encoded = authHeader.slice("Basic ".length);
-    const decoded = Buffer.from(encoded, "base64").toString("utf-8");
-    // Nur am ersten ":" trennen - ein Passwort mit ":" darf nicht abgeschnitten werden
-    // (naives split(":") wuerde sonst alles nach dem zweiten ":" verwerfen).
-    const separatorIndex = decoded.indexOf(":");
-    const user = decoded.slice(0, separatorIndex);
-    const password = decoded.slice(separatorIndex + 1);
-
-    if (user === validUser && password === validPassword) {
-      return NextResponse.next();
-    }
+  if (request.nextUrl.pathname === "/login") {
+    return NextResponse.next();
   }
 
-  return new NextResponse("Authentication required", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Faktencheck-Inbox"' },
-  });
+  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (await isValidSessionToken(token, validPassword)) {
+    return NextResponse.next();
+  }
+
+  return NextResponse.redirect(new URL("/login", request.url));
 }
 
 export const config = {
