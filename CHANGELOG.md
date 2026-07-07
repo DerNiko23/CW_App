@@ -1,33 +1,40 @@
 # CHANGELOG
 
-## [2026-07-07] Kritischer Fix: Detailseite blieb auf Production im Lade-Skeleton hängen
+## [2026-07-07] Untersuchung "Detailseite hängt im Lade-Skeleton": Testbrowser-Artefakt, kein App-Bug
 
 Auf Nutzer-Hinweis hin gezielt gegen die echte Production-URL getestet (nicht nur Dev-Server):
-direkte URL-Navigation zur Detailseite + mehrfacher Hard-Reload in einem echten Chrome-Browser
-gegen `cw-app-eosin.vercel.app`. Ergebnis: **2 von 3 Hard-Reloads blieben dauerhaft im
-Lade-Skeleton hängen** (auch nach 15+ Sekunden Wartezeit) – der echte Inhalt war im HTML
-vorhanden, aber unsichtbar in einem `<div hidden>` gefangen. Die Inbox-Seite lief im selben
-Test 4/4 fehlerfrei durch.
+direkte URL-Navigation zur Detailseite + mehrfacher Hard-Reload in einem echten, mit dem
+Windows-Nutzerprofil verbundenen Chrome-Browser gegen `cw-app-eosin.vercel.app`. Erster Befund:
+**2 von 3 Hard-Reloads blieben dauerhaft im Lade-Skeleton hängen** (auch nach 15+ Sekunden
+Wartezeit) – der echte Inhalt war im HTML vorhanden, aber unsichtbar in einem `<div hidden>`
+gefangen (`bis_skin_checked`-Attribut sichtbar – dasselbe Signal wie beim Phase-2-Bug).
 
-**Root Cause:** identisches Muster zum bereits in Phase 2 diagnostizierten Bug (siehe
-"[2026-07-06] Phase 2"-Eintrag unten) – eine im Testbrowser installierte Antiviren-Erweiterung
-(Bitdefender) injiziert per MutationObserver DOM-Attribute (`bis_skin_checked`), bevor Reacts
-Streaming-Suspense-Reveal-Script laufen kann, und gewinnt manchmal das Rennen. Für die Inbox
-wurde das damals gefixt (inneres Suspense entfernt, Daten direkt awaited); `app/videos/[id]`
-hatte aber weiterhin ein `loading.tsx`, das Next.js automatisch in eine route-weite
-Suspense-Grenze verpackt – dieselbe Angriffsfläche, nie behoben, weil nie mit Hard-Reload
-gegen die echte Production-URL getestet (nur Dev-Server + Klick-Navigation).
+**Voreiliger Zwischenschritt (zurückgenommen):** Erste Vermutung war, `app/videos/[id]/loading.tsx`
+verursache eine zusätzliche, route-eigene Suspense-Grenze und ihr Entfernen würde das Problem
+beheben. Nach dem Entfernen zunächst 5/5 saubere Reloads – aber weitere Tests widerlegten das:
+dieselbe "erfolgreiche" URL blieb beim nächsten Versuch ebenfalls hängen, ein Video mit
+Reaktions-Baukasten 2/2 Mal, und sogar die Inbox zeigte strukturell denselben
+`<div id="S:0" hidden>`-Wrapper um den gesamten Inhalt. Das Streaming-Marker-Muster
+(`<!--$-->…<!--/$-->` + Reveal-Script) ist fester Bestandteil von Next.js' 16 RSC-Streaming für
+jede dynamische Seite dieser App, unabhängig von `loading.tsx` – das Entfernen der Datei hatte
+keinen echten Effekt, nur zufällig eine Erfolgsserie erzeugt.
 
-**Fix:** `app/videos/[id]/loading.tsx` entfernt. Die Seite ist bereits `force-dynamic` und
-awaitet ihre Daten direkt (kein eigenes internes Suspense) – ohne `loading.tsx` gibt es keine
-route-weite Suspense-Grenze mehr, die Navigation blockiert bis die Seite fertig ist statt einen
-Fallback zu streamen, der hängen bleiben kann. Bei den bisherigen Ladezeiten (~300–900 ms) kein
-spürbarer Nachteil. Lokal verifiziert: `sectionCount` bleibt nach mehreren Reloads konstant bei
-3 (keine doppelten Skeleton-/Real-Sections mehr im DOM). Build/Lint sauber.
+**Entscheidender Test:** derselbe Reload-Stresstest (6 Durchläufe je Route: Inbox, einfache
+Detailseite, Detailseite mit Reaktions-Baukasten) in einem frischen, erweiterungsfreien
+Chromium (via Playwright, `npx playwright install chromium`, keine Verbindung zum
+Windows-Chrome-Profil) gegen dieselbe Production-URL: **0 von 18 Versuchen hängen geblieben.**
+Damit bestätigt: das Problem ist **spezifisch an die im Testbrowser installierte
+Antiviren-Erweiterung (Bitdefender) gebunden**, die per MutationObserver DOM-Attribute
+injiziert, bevor Reacts Streaming-Reveal-Script laufen kann, und dabei gelegentlich das Rennen
+gewinnt – kein Bug im App-Code, kein Next.js-/Vercel-Problem.
 
-**Nicht angefasst:** `app/loading.tsx` (Inbox) bleibt bestehen – 4/4 Hard-Reloads liefen dort
-im selben Production-Test fehlerfrei, kein akuter Handlungsbedarf. Falls das Muster dort
-künftig doch auftritt, gleicher Fix (Datei entfernen) anwendbar.
+**Endzustand:** `app/videos/[id]/loading.tsx` wiederhergestellt (auf das neue
+Hairline-Divider-Design des Redesigns angepasst, `gap-8`→`gap-14`, Card-Chrome→`border-t`,
+damit das Skeleton zur echten Seite passt) – kein Grund, die Lade-Skeleton-UX für ein Problem
+zu opfern, das nicht im Code liegt. **Falls Chris beim echten Arbeiten mit der App eine
+Detailseite dauerhaft hängen sieht:** höchstwahrscheinlich eine ähnliche
+DOM-mutierende Browser-Erweiterung (Antivirus, Werbeblocker o. Ä.) – Erweiterungen deaktivieren
+oder Inkognito-Fenster testen, keine Server-/Code-Ursache zu erwarten.
 
 ## [2026-07-07] Design-Redesign: weg vom "KI-generiert"-Look (Design-Richtung C)
 

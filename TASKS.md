@@ -41,12 +41,12 @@
   Deep-Teal-Akzent, echte Ampel-Logik, scharfe Radien, Inter+Space-Grotesk-Typografie) auf allen
   3 Views angewendet. Dabei einen latenten Bug gefunden+gefixt (`font-display` war nie eine echte
   Tailwind-Utility). Details in CHANGELOG.
-- [x] ⚠ **Detailseite blieb auf Production im Lade-Skeleton hängen** – gezielt gegen die echte
-  Vercel-URL getestet (Hard-Reload, echter Chrome-Browser): 2 von 3 Versuchen blieben dauerhaft
-  hängen. Root Cause: Bitdefender-Erweiterung interferiert mit Reacts Streaming-Suspense-Reveal
-  (gleiches Muster wie der Phase-2-Bug). Fix: `app/videos/[id]/loading.tsx` entfernt (Seite
-  blockiert jetzt bis fertig statt einen hängenbleiben-fähigen Fallback zu streamen). Details in
-  CHANGELOG.
+- [x] ⚠ **Untersucht: Detailseite blieb im Testbrowser im Lade-Skeleton hängen** – gezielt gegen
+  die echte Vercel-URL getestet (Hard-Reload, echter Chrome-Browser: 2/3 hängen geblieben).
+  Nach Gegentest in frischem, erweiterungsfreiem Chromium (Playwright, 18/18 Versuche sauber)
+  bestätigt: Testbrowser-Antiviren-Erweiterung (Bitdefender), kein App-/Server-Bug.
+  `app/videos/[id]/loading.tsx` wiederhergestellt (nur ans neue Hairline-Design angepasst).
+  Details in CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt
