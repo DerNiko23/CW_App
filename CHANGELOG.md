@@ -1,5 +1,112 @@
 # CHANGELOG
 
+## [2026-07-09] Login-Seite: generativer Flow-Field-Hintergrund (Canvas 2D)
+
+**Nachschliff auf Feedback (Screenshot):** Die Login-Card von solidem `bg-card` auf echtes Glass
+umgestellt – `bg-white/10` + `backdrop-blur-xl` + `border-white/40` + `rounded-[28px]` (deutlich
+runder als unser sonstiges scharfes System, bewusste Ausnahme wie schon Status-Pills und das
+Filter-Dropdown-Panel) + dezenter Inset-Highlight für den "Glasrand". Damit ist die Tinten-
+Zeichnung durch die Card hindurch sichtbar (weichgezeichnet statt hart verdeckt). Passwortfeld
+und "Anmelden"-Button bleiben bewusst solide/undurchsichtig (Eingabefeld weiß, Button
+Fast-Schwarz `rounded-full`) – Kontrast/Bedienbarkeit für die einzige interaktive Aktion der
+Seite geht vor Konsistenz mit dem Glass-Look. Verifiziert per Scratch-Canvas-Overlay auf einer
+bereits authentifizierten Seite (gleiche Methode wie beim ersten Verifikationslauf, siehe unten –
+kein Antasten der Auth-Middleware).
+
+**Zweiter Nachschliff (Screenshot):** Die äußere Card-Box komplett entfernt – Titel, Passwortfeld
+und Button liegen jetzt direkt auf dem Canvas, kein umschließender Rahmen mehr
+(`app/login/page.tsx`, Wrapper-`div` ohne `bg`/`border`/`blur`). "Factcheck" bekommt dafür einen
+weichen Text-Shadow (`[text-shadow:0_2px_20px_rgba(250,250,250,0.9)]`) statt einer Fläche, damit
+die Überschrift über den Tintenlinien lesbar bleibt, ohne eine sichtbare Box zu brauchen.
+Passwortfeld (`app/login/login-form.tsx`) jetzt selbst im Glass-Stil: `bg-white/20 backdrop-blur-md
+border-white/40` mit Inset-Highlight. "Anmelden"-Button ebenfalls Glass, aber dunkel
+getönt (`bg-neutral-900/60` + `backdrop-saturate-150` für sichtbare Tiefe statt flachem Grau, `/35`
+Opazität wirkte im ersten Versuch zu blass) – weißer Text darauf bleibt klar AA-konform (per
+`getComputedStyle` verifiziert: `oklab(0.205 ... / 0.6)` auf dem hellen Canvas-Grund kompositiert
+zu einem satten Dunkelgrau). Fokus-Ring auf dem Passwortfeld bleibt Deep Teal (bestehende
+"Fokus ist ein Marken-Moment"-Regel aus DESIGN.md), nicht angetastet.
+
+**Dritter Nachschliff:** Passwortfeld-Radius von `rounded-2xl` auf `rounded-full` angeglichen,
+damit Eingabefeld und Button dieselbe Pill-Form teilen statt unterschiedlicher Eckenrundung.
+
+**Vierter Nachschliff: Animation laeuft jetzt endlos statt einmalig beim Laden zu "setzen".**
+Ursprüngliche Spec ("nach fester Frame-Zahl stoppt die Animation") auf Nutzerwunsch bewusst
+aufgegeben - Canvas wird jetzt nie mehr komplett fest, sondern faedet pro Frame minimal Richtung
+Papierfarbe (`FADE_ALPHA = 0.0012`) bevor neue Segmente gezeichnet werden: alte Striche loesen
+sich langsam auf, neue kommen laufend dazu. Erststart bleibt ein synchroner Prewarm-Durchlauf
+(500 Frames ohne Fade), damit das Bild beim Laden sofort dicht aussieht statt leer zu beginnen.
+
+Vor der finalen Wahl von `FADE_ALPHA=0.0012` mehrere staerkere Fade-Raten (0.004/0.008/0.015)
+tatsaechlich im Browser ueber simulierte Zeitraeume getestet (nicht nur angenommen): staerkeres
+Fading liess das Bild schon nach ~80 simulierten Sekunden zu einem diffusen grauen Schleier
+verwaschen (Tinte hatte nie genug Zeit, sich zu satten Linien aufzubauen), trotz rechnerisch
+"stabilerer" Durchschnittshelligkeit - ein Fall, in dem die Zahl allein in die Irre fuehrte und
+der tatsaechliche Screenshot den Ausschlag gab. Bei `0.0012` bleibt das Bild ueber mehrere Minuten
+sichtbar schoener/definierter (mehr Struktur baut sich auf), driftet aber ueber sehr lange
+Sessions (>10-15 Min. Dauerlauf) langsam dunkler. Dagegen kein staerkeres Fading (siehe oben),
+stattdessen ein simpler Sicherheitsnetz-Reset: nach ~90.000 Frames (~25 Min bei 60fps) setzt sich
+die Engine einmalig mit neuem Seed frisch auf, statt unbegrenzt weiterzudriften.
+
+`prefers-reduced-motion` unveraendert: kein Loop, nur der synchrone Prewarm-Durchlauf, danach
+eingefroren - Bewegungsverzicht bleibt Vorrang vor "immer in Bewegung". `document.hidden` pausiert
+weiterhin den Loop. Verifiziert per Live-`requestAnimationFrame`-Loop im Scratch-Canvas (echte
+Bewegung über reale Sekunden beobachtet, nicht nur synchron simuliert) plus Fast-Forward-Tests
+(~4 Min. simuliert) für die Langzeit-Optik.
+
+**Fünfter Nachschliff: Striche wurden nach ~10s spürbar zu dick.** Ursache: die laufende Animation
+zeichnete mit derselben Alpha wie der einmalige Prewarm-Durchlauf (`INK_ALPHA = 0.075`) - dieselbe
+Konvergenz-Linie wird vom (deterministischen, unveränderten) Feld immer wieder von neuen Partikeln
+getroffen, dadurch verdickten sich die Spines schon in den ersten Sekunden Dauerbetrieb sichtbar.
+`INK_ALPHA` in `PREWARM_INK_ALPHA` (0.075, nur für den einmaligen Erststart) und `LIVE_INK_ALPHA`
+(0.025, für den endlosen Loop) aufgeteilt - der Ersteindruck bleibt unveraendert dicht, aber die
+laufende Animation legt pro Frame deutlich weniger Tinte nach. Im Browser mit drei Kandidaten
+(0.075/0.025/0.012) bei t=0 und t=10s live verglichen statt nur angenommen: bei 0.025 ist der
+Unterschied zwischen t=0 und t=10s kaum noch wahrnehmbar, bei der alten 0.075 deutlich sichtbar
+dicker. `FADE_ALPHA`/`LONG_SESSION_RESET_FRAMES` unveraendert.
+
+Gepusht auf `main` (Nutzer hat das nach diesem Nachschliff explizit angefordert).
+
+Neue Datei `components/login/flow-field-background.tsx`: animierter Tintenlinien-Hintergrund für
+`/login`, komplett auf `<canvas>` berechnet, kein Bild-Asset, kein npm-Package. Technik auf
+Nutzerwunsch von einem extern gezeigten Referenzbeispiel übernommen (seeded Flow-Field aus
+Noise-Partikeln), aber bewusst nur die **Technik** – nicht die dort gezeigte Print-Shop-UI
+(Editionsnummer, Mint-/Regenerate-Buttons, Paletten-Switcher). Unsere Login-Seite bleibt simpel
+(ein Passwortfeld, ein Button), passend zu CLAUDE.md ("ein Nutzer, kein Auth-Flow, keine
+Settings"). Farben bewusst unser bestehendes System (Off-White/Fast-Schwarz/Deep-Teal) statt der
+Referenz-Palette (warmes Parchment/Oxblood) – letzteres wäre zu nah an der in DESIGN.md explizit
+verworfenen "Design-Richtung B" gewesen.
+
+**Technik:** seeded `mulberry32`-PRNG (Seed = `Date.now()` pro Seitenaufruf) treibt eine
+handgeschriebene 2D-Perlin-Noise-Funktion (3 Oktaven summiert) als Vektorfeld; ein paar hundert
+Partikel (skaliert mit Viewport-Fläche, Deckel niedriger auf Mobile: 240 statt 460) folgen dem
+Feld und zeichnen pro Frame ein kurzes, sehr transparentes Liniensegment. Canvas wird nach dem
+initialen Off-White-Fill nie wieder geleert – wo sich Linien häufen, entsteht Tiefe. ~7,5 % der
+Partikel zeichnen in Deep Teal als Akzent. Nach 700 Frames stoppt die Animation endgültig ("Print
+setzt sich"). `prefers-reduced-motion` überspringt den Animations-Loop und zeichnet dieselbe
+Technik in einem synchronen Durchlauf sofort fertig. `visibilitychange` pausiert bei
+Tab-Wechsel; Resize baut Feld+Partikel neu auf.
+
+**Ein reales Tuning-Problem gefunden und behoben, direkt im Browser verifiziert statt blind
+geschätzt:** Erste Version wirkte wie "verwaschener Bleistift" statt Tinte, und der Teal-Akzent
+war praktisch unsichtbar (Pixel-Sampling zeigte 0 erkennbare Akzent-Pixel unter ~22.000 Stichproben).
+Ursache: Alpha zu niedrig und Partikel-Lebensdauer zu kurz, dadurch konnten sich Konvergenzzonen
+nie zu echtem Schwarz aufbauen (exakt das Problem, das auch die mitgelieferte Referenz-Fallstudie
+in ihrer ersten Kritikrunde beschreibt). Fix: `INK_ALPHA` 0.05→0.075, `ACCENT_ALPHA_MULT`
+1.6×→3.2×, Partikel-Lebensdauer 40–140→70–220 Frames – danach im Browser (Pixel-Sampling +
+Screenshot) bestätigt: sichtbare Tiefe in den Konvergenzzonen, klar erkennbare Teal-Fäden.
+
+**Verifiziert ohne die echte Auth-Middleware zu berühren:** Der Login-Session-Cookie ist
+`httpOnly` (`app/login/actions.ts`) und daher aus der Seite heraus nicht löschbar. Statt den
+Redirect-Guard in `app/login/page.tsx` testweise zu deaktivieren (ein erster Versuch dazu wurde
+vom Auto-Mode-Classifier zu Recht als Security-Weakening geblockt und sofort rückgängig gemacht),
+wurde dieselbe Engine 1:1 als Scratch-Overlay auf einer bereits authentifizierten Seite injiziert
+(Desktop + Mobile 375px) – keine Datei- oder Auth-Änderung nötig, nach dem Test wieder entfernt.
+`npm run lint` und `npm run build` sauber.
+
+`app/login/page.tsx`: Layout auf zentrierte Card (`bg-card`, Hairline-Border, `rounded-3xl`, kein
+Schatten – DESIGN.md reserviert Schatten für echte Overlay-Ebenen) über dem Canvas umgestellt,
+`login-form.tsx`/`app/login/actions.ts` unverändert.
+
 ## [2026-07-09] Button-Redesign (rounded-full), FilterBar-Neubau (Multi-Select), Header-Aufräumung
 
 **Auf Nutzerwunsch mit Referenz-Screenshot, kein selbst initiiertes Redesign.** Drei zusammenhängende

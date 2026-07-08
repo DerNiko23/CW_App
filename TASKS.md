@@ -91,6 +91,13 @@
   Multi-Select umgestellt) + Header aufgeräumt (Hotkey-Zeile entfernt, Export neben Titel).
   Live + Mobile (375px) geprüft, Build/Lint grün. DESIGN.md-Bruch bewusst dokumentiert statt
   stillschweigend übergangen. Details in CHANGELOG.
+- [x] Login-Seite: generativer Flow-Field-Hintergrund (Canvas 2D, seeded, kein Asset/Package),
+  auf Nutzerwunsch nach Referenzbeispiel gebaut. Mehrere Nachschliff-Runden direkt anhand von
+  Nutzer-Screenshots (Glass-Card → Box komplett entfernt → Passwortfeld/Button im Glass-Stil →
+  Animation läuft endlos statt einmalig zu "setzen" → Live-Zeichenrate gedrosselt, damit Striche
+  nicht nach ~10s zu dick werden). Alle Tuning-Entscheidungen im Browser verifiziert statt nur
+  angenommen (u. a. Fade-Raten und Prewarm/Live-Alpha-Split per Screenshot-Vergleich). Details
+  in CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt
