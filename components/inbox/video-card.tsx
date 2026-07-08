@@ -13,9 +13,12 @@ export function VideoCard({ item, priority = false }: { item: InboxItem; priorit
   const showActions = video.status === "new" || video.status === "accepted";
 
   return (
-    <article className="group overflow-hidden rounded-3xl border border-border bg-card transition-colors duration-200 hover:border-accent/50">
-      <Link href={`/videos/${video.id}`} className="block">
-        <div className="flex gap-4 p-4 sm:gap-5 sm:p-5">
+    <article className="group -mx-4 px-4 py-5 transition-colors duration-200 hover:bg-muted/40 sm:-mx-6 sm:px-6 sm:py-6">
+      <Link
+        href={`/videos/${video.id}`}
+        className="block rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <div className="flex gap-4 sm:gap-5">
           <div className="relative aspect-video w-28 shrink-0 overflow-hidden rounded-xl bg-muted sm:w-40">
             {video.thumbnail ? (
               <Image
@@ -42,9 +45,9 @@ export function VideoCard({ item, priority = false }: { item: InboxItem; priorit
                 <p className="truncate text-xs text-muted-foreground">
                   {video.channel ?? "Unbekannter Kanal"}
                 </p>
-                <h3 className="line-clamp-1 font-heading text-sm font-semibold text-foreground sm:text-base">
+                <h2 className="line-clamp-1 font-heading text-sm font-semibold text-foreground sm:text-base">
                   {video.title}
-                </h3>
+                </h2>
               </div>
               <ScoreBadge score={score.total} size="sm" showLabel={false} className="shrink-0" />
             </div>
@@ -67,8 +70,8 @@ export function VideoCard({ item, priority = false }: { item: InboxItem; priorit
       </Link>
 
       {showActions && (
-        <div className="flex justify-end border-t border-border/70 px-4 py-2.5 sm:px-5">
-          <ActionButtons videoId={video.id} status={video.status} size="sm" />
+        <div className="mt-3 flex justify-end border-t border-border/70 pt-3">
+          <ActionButtons videoId={video.id} status={video.status} />
         </div>
       )}
     </article>

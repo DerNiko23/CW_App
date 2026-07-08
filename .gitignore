@@ -39,6 +39,12 @@ yarn-error.log*
 # claude code local settings
 .claude/settings.local.json
 
+# impeccable local/runtime state (machine-specific, not project config)
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/live/server.json
+.impeccable/live/sessions/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

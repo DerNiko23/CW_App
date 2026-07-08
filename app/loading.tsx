@@ -1,6 +1,6 @@
-function CardSkeleton() {
+function RowSkeleton() {
   return (
-    <div className="flex gap-4 rounded-3xl border border-border bg-card p-4 sm:gap-5 sm:p-5">
+    <div className="flex gap-4 py-5 sm:gap-5 sm:py-6">
       <div className="aspect-video w-28 shrink-0 animate-pulse rounded-xl bg-muted sm:w-40" />
       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
         <div className="flex items-start justify-between gap-3">
@@ -8,7 +8,7 @@ function CardSkeleton() {
             <div className="h-3 w-24 animate-pulse rounded bg-muted" />
             <div className="h-4 w-48 animate-pulse rounded bg-muted" />
           </div>
-          <div className="h-6 w-12 shrink-0 animate-pulse rounded-full bg-muted" />
+          <div className="h-7 w-9 shrink-0 animate-pulse rounded bg-muted" />
         </div>
         <div className="h-4 w-full animate-pulse rounded bg-muted" />
         <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
@@ -37,9 +37,9 @@ export default function InboxLoading() {
         <div className="h-9 w-28 animate-pulse rounded-lg bg-muted/70" />
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col divide-y divide-border">
         {Array.from({ length: 4 }).map((_, i) => (
-          <CardSkeleton key={i} />
+          <RowSkeleton key={i} />
         ))}
       </div>
     </div>

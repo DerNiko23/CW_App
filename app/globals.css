@@ -71,11 +71,11 @@
   --muted-foreground: #737373;
   --accent: #0b7a6a;
   --accent-foreground: #ffffff;
-  --destructive: #c1432e;
+  --destructive: #b03a26;
   --destructive-foreground: #ffffff;
-  --warning: #c99a02;
+  --warning: #7a5f00;
   --warning-foreground: #141414;
-  --success: #1e8e5a;
+  --success: #1a7d4f;
   --success-foreground: #ffffff;
   --border: #e3e3e3;
   --input: #e3e3e3;
@@ -139,5 +139,20 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* Polish 2026-07-08: globale Regel statt Einzelfall-Fixes - deckt Karten-Stagger,
+   Hover-Zoom auf Thumbnails und alle zukuenftigen Animationen gleichermassen ab.
+   Kollabiert Dauer statt Sichtbarkeit zu togglen, damit an Sichtbarkeit gekoppelte
+   Reveal-Inhalte nicht leer bleiben. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

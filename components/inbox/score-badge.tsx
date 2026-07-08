@@ -4,15 +4,8 @@ import { scorePriorityLabel } from "@/lib/inbox/constants";
 type Tier = "hero" | "high" | "mid" | "low";
 
 // Echte Ampel-Logik: gruen = hohe Prioritaet, gelb = mittel, rot = niedrig.
-// hero/high teilen sich die gruene Familie (solid vs. getoent), damit die
-// Kompaktansicht weiterhin 4 Stufen unterscheidet.
-const CHIP_STYLES: Record<Tier, string> = {
-  hero: "bg-success text-success-foreground",
-  high: "border border-success/30 bg-success/15 text-success",
-  mid: "border border-warning/30 bg-warning/15 text-warning",
-  low: "border border-destructive/25 bg-destructive/10 text-destructive",
-};
-
+// hero/high teilen sich die gruene Familie, damit die Kompaktansicht
+// weiterhin 4 Stufen unterscheidet.
 const BARE_TEXT: Record<Tier, string> = {
   hero: "text-success",
   high: "text-success",
@@ -25,6 +18,15 @@ const DOT_STYLES: Record<Tier, string> = {
   high: "bg-success",
   mid: "bg-warning",
   low: "bg-destructive",
+};
+
+// Liste und Detailseite teilen sich jetzt dieselbe nackte-Zahl-Sprache -
+// nur die Groesse unterscheidet. text-6xl bleibt exklusiv der Detailseite
+// vorbehalten (DESIGN.md: "Die Eine-Zahl-Regel").
+const SIZE_TEXT: Record<"sm" | "md" | "lg", string> = {
+  sm: "text-2xl",
+  md: "text-4xl",
+  lg: "text-6xl",
 };
 
 function tierFor(score: number): Tier {
@@ -47,50 +49,35 @@ export function ScoreBadge({
 }) {
   const tier = tierFor(score);
   const rounded = Math.round(score);
+  const priorityLabel = scorePriorityLabel(rounded);
 
-  // Detailseite: Score-Zahl ist das visuelle Signature-Element - bewusst
-  // ohne umschliessenden Chip, nur grosse Space-Grotesk-Zahl + Ampel-Farbe.
-  if (size === "lg") {
-    return (
-      <div className={cn("inline-flex flex-col gap-1", className)}>
-        <span
-          className={cn(
-            "font-heading text-6xl leading-none font-semibold tabular-nums",
-            BARE_TEXT[tier],
-          )}
-        >
-          {rounded}
-        </span>
-        {showLabel && (
-          <span className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            <span className={cn("size-2 rounded-full", DOT_STYLES[tier])} />
-            {scorePriorityLabel(rounded)}
-          </span>
-        )}
-      </div>
-    );
-  }
-
+  // Score-Zahl ist das visuelle Signature-Element auf jeder Groesse - bewusst
+  // ohne umschliessenden Chip, nur Space-Grotesk-Zahl + Ampel-Farbe. Audit
+  // 2026-07-08: aria-label auf dem Container statt der reinen Zahl, damit
+  // Screenreader auch bei showLabel=false den vollen Kontext bekommen statt
+  // einer nackten, unbeschrifteten Zahl.
   return (
     <div
-      className={cn(
-        "inline-flex flex-col items-center justify-center rounded-2xl px-3 py-1.5 leading-none",
-        CHIP_STYLES[tier],
-        size === "sm" && "px-2 py-1",
-        className,
-      )}
+      className={cn("inline-flex flex-col gap-1", className)}
+      aria-label={`Opportunity Score ${rounded} von 100, ${priorityLabel}`}
     >
       <span
+        aria-hidden="true"
         className={cn(
-          "font-heading font-semibold tabular-nums",
-          size === "sm" ? "text-lg" : "text-2xl",
+          "font-heading leading-none font-semibold tabular-nums",
+          SIZE_TEXT[size],
+          BARE_TEXT[tier],
         )}
       >
         {rounded}
       </span>
       {showLabel && (
-        <span className="text-[9px] font-medium tracking-wide uppercase opacity-70">
-          {size === "sm" ? "Score" : scorePriorityLabel(rounded)}
+        <span
+          aria-hidden="true"
+          className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+        >
+          <span className={cn("size-2 rounded-full", DOT_STYLES[tier])} />
+          {priorityLabel}
         </span>
       )}
     </div>

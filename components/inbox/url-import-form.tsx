@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Link2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { truncateMessage } from "@/lib/format";
 
 type ImportResult =
   | { status: "processed"; videoId: string }
@@ -39,7 +40,7 @@ export function UrlImportForm() {
         if (!res.ok || "error" in result) {
           setMessage({
             kind: "error",
-            text: "error" in result ? result.error : "Import fehlgeschlagen.",
+            text: "error" in result ? truncateMessage(result.error) : "Import fehlgeschlagen.",
           });
           return;
         }
@@ -64,8 +65,12 @@ export function UrlImportForm() {
     <div className="flex flex-col gap-1.5">
       <form onSubmit={handleSubmit} className="flex gap-2">
         <div className="relative flex-1">
+          <label htmlFor="url-import-input" className="sr-only">
+            YouTube-URL
+          </label>
           <Link2 className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
+            id="url-import-input"
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}

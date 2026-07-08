@@ -8,7 +8,7 @@ export const maxDuration = 120;
 
 // Manueller URL-Import (MASTERPLAN.md §5). Kein eigener Auth-Check: der Pfad
 // läuft (anders als /api/cron/*) durch proxy.ts und ist damit bereits per
-// HTTP Basic Auth geschützt.
+// Session-Cookie geschützt.
 export async function POST(request: NextRequest) {
   const youtubeApiKey = process.env.YOUTUBE_API_KEY;
   if (!youtubeApiKey) {

@@ -56,6 +56,21 @@
   Streaming statt Polling, stoppt bei 5 Treffern/20 Kandidaten/8 Suchen), Leerzustand jetzt mit echter
   Handlung statt nur Text. Auto-Search live mit echten API-Aufrufen getestet (5 Treffer gefunden, u. a.
   Honig-Mythos, Confidence 100). Details in CHANGELOG.
+- [x] `/impeccable init`: `PRODUCT.md` + `DESIGN.md`/`.impeccable/design.json` angelegt (North Star
+  "Der klare Befund"), Live-Mode vorkonfiguriert.
+- [x] `/impeccable critique` auf die Inbox: 24/40, kein AI-Slop, 3 P1s gefunden und direkt behoben
+  (Annehmen/Ablehnen/Erledigt ohne Feedback, 2× WCAG-Kontrast-Fehler bei `--success`/`--warning`) –
+  live verifiziert, Details in CHANGELOG.
+- [x] Kritik-P2: Listenansicht an die "Klarer Befund"-Identität der Detailseite angleichen –
+  Card-Chrome entfernt, Hairline-Trennung, nackte Score-Zahl wie Detailseite. Live + Mobile geprüft.
+- [x] Kritik-P2: Keyboard-Shortcuts für Annehmen/Ablehnen/Erledigt (`a`/`1`-`4`/`d`, Zeile hovern) –
+  echtes Bulk-Multi-Select bewusst zurückgestellt (siehe CHANGELOG-Begründung). Live geprüft.
+- [x] `/impeccable polish`: Lade-Skeleton-Drift, Skipped-Heading-Level, fehlender Fokus-Ring,
+  Touch-Targets, rohe Fehlermeldungen, stale Auth-Kommentar, globales `prefers-reduced-motion` –
+  Details in CHANGELOG. Build/Lint/Tests grün.
+- [x] `/impeccable audit` (ganze App, 5 Dimensionen): 16/20 ("Good"). 3 neue A11y-Funde behoben
+  (Kontrast `--destructive`, Screenreader-Label auf Score-Zahl, Labels auf 2 Inputs) – Details in
+  CHANGELOG. Build/Lint/Tests grün.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

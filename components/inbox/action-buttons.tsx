@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Check, X, CircleCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -29,23 +30,38 @@ export function ActionButtons({
 
   function handleAccept() {
     startTransition(async () => {
-      await acceptVideo(videoId);
-      router.refresh();
+      try {
+        await acceptVideo(videoId);
+        toast.success("Angenommen");
+        router.refresh();
+      } catch (err) {
+        toast.error((err as Error).message);
+      }
     });
   }
 
   function handleReject(reason: RejectReason) {
     setOpen(false);
     startTransition(async () => {
-      await rejectVideo(videoId, reason);
-      router.refresh();
+      try {
+        await rejectVideo(videoId, reason);
+        toast.info(`Abgelehnt: ${reason}`);
+        router.refresh();
+      } catch (err) {
+        toast.error((err as Error).message);
+      }
     });
   }
 
   function handleDone() {
     startTransition(async () => {
-      await markVideoDone(videoId);
-      router.refresh();
+      try {
+        await markVideoDone(videoId);
+        toast.success("Als erledigt markiert");
+        router.refresh();
+      } catch (err) {
+        toast.error((err as Error).message);
+      }
     });
   }
 

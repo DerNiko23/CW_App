@@ -1,5 +1,128 @@
 # CHANGELOG
 
+## [2026-07-08] Impeccable-Audit: 3 weitere A11y-Fixes (Kontrast, ARIA, Formular-Labels)
+
+`/impeccable audit` als letzter Schritt vor dem Loom (document → critique → Struktur-Fix → polish
+→ audit). Diagnostischer Scan über 5 Dimensionen (A11y, Performance, Theming, Responsive,
+Anti-Patterns) auf die ganze App, nicht nur die Inbox. Ergebnis: **16/20 ("Good")**. Drei neue,
+bis dahin unentdeckte Accessibility-Funde direkt behoben (Audit findet normalerweise nur, hier
+zusätzlich gefixt, weil die Funde jeweils eine einzeilige, risikoarme Ursache hatten):
+
+- **"Abgelehnt"-Statuspille verfehlte AA-Kontrast** (~4,4:1, braucht 4,5:1): dieselbe
+  Kontrast-Fallgrube wie zuvor bei `--success`/`--warning`, hier `--destructive` (`#C1432E` →
+  `#B03A26`, jetzt ~5,2:1). Nicht Teil der Kritik, weil dort nur success/warning stichprobenartig
+  geprüft wurden – Audit hat systematisch alle drei Ampelfarben nachgerechnet und live verifiziert.
+- **Score-Zahl ohne Screenreader-Kontext**: `ScoreBadge` zeigte bei `showLabel={false}`
+  (Listenansicht) eine nackte, unbeschriftete Zahl für Screenreader – exakt das Sam-Persona-Problem
+  aus der Kritik, dort nur beobachtet, jetzt behoben. `aria-label` auf dem Container
+  ("Opportunity Score 47 von 100, Mittlere Priorität"), sichtbare Zahl/Label per `aria-hidden`
+  ausgeblendet, damit Screenreader nicht beides doppelt vorlesen.
+- **Zwei Inputs nur mit Placeholder statt echtem Label** (URL-Import-Feld, Login-Passwortfeld):
+  Placeholder verschwindet bei Eingabe und wird nicht von jedem Screenreader zuverlässig als Label
+  erkannt (WCAG 1.3.1/4.1.2). Je ein `sr-only`-`<label>` ergänzt, visuell unverändert.
+
+Build, Lint (0 Fehler) und Testsuite (42/42) nach den Fixes grün. `DESIGN.md`/
+`.impeccable/design.json` mit dem neuen `--destructive`-Wert nachgezogen.
+
+**Nicht verändert (bewusst, geprüft statt übersehen)**: `--muted-foreground` (#737373) liegt bei
+~4,54:1 – knapp über AA, aber fragil nah an der Schwelle; da es aktuell besteht und extrem breit
+verwendet wird (Meta-Zeilen, Captions), keine Änderung ohne konkreten Anlass. Touch-Targets bleiben
+bei 32px (siehe Polish-Eintrag) statt vollen 44px – bewusster Trade-off gegen das kompakte
+Design-System, nicht erneut aufgegriffen. Dark-Mode-Tokens (`.dark`-Block, `dark:`-Utility-Klassen
+in den shadcn-Primitiven) existieren, sind aber nie verdrahtet (kein Toggle, kein `next-themes`) –
+totes, aber harmloses Boilerplate, kein aktiv gepflegtes Feature; nicht Teil des Produkts
+(PRODUCT.md fordert keinen Dark Mode), daher nicht entfernt oder repariert.
+
+## [2026-07-08] Impeccable-Polish: Skeleton-Drift, Semantik, Touch-Targets, Reduced-Motion
+
+`/impeccable polish` auf die Inbox (Fortsetzung von document → critique → Struktur-Fix). Fand und
+behob Drift, den die vorherigen Fixes selbst eingeführt hatten, plus ein paar zuvor bewusst
+zurückgestellte Kleinigkeiten aus der Kritik:
+
+- **Lade-Skeleton war nach dem Card→Hairline-Redesign stehengeblieben**: `app/loading.tsx` zeigte
+  noch die alte `rounded-3xl border bg-card`-Kartenform – nach dem Struktur-Fix wäre beim Laden ein
+  falscher Skeleton-Umriss aufgeblitzt, der nicht zur echten (jetzt kartenlosen) Zeile passt.
+  `CardSkeleton` → `RowSkeleton`, gleiche Full-Bleed/Hairline-Logik wie die echte Liste.
+- **Skipped Heading Level** (Kritik-Fund, damals bewusst außerhalb des P1+P2-Scopes zurückgestellt):
+  `<h1>` (Seitentitel) → `<h3>` (Kartentitel) ohne `<h2>` dazwischen. Fix: `<h3>` → `<h2>` in
+  `video-card.tsx`.
+- **Fehlender sichtbarer Fokus-Ring auf der Zeilen-Link** (vorbestehende Lücke, beim Redesign
+  aufgefallen): `focus-visible:ring-3 focus-visible:ring-ring/50` ergänzt – dasselbe Muster, das
+  Button/Input bereits nutzen.
+- **Touch-Targets**: Annehmen/Ablehnen in der Liste liefen noch auf `size="sm"` (28px) aus der Zeit
+  vor dem Redesign; jetzt Standardgröße (32px), konsistent mit dem Rest der App und näher an
+  44×44pt.
+- **Rohe Server-Fehlermeldungen ungefiltert in Toasts/Inline-Texten** (Kritik: "latent, nicht
+  bestätigt aktiv"): neue `truncateMessage()`-Hilfsfunktion (`lib/format.ts`), angewendet in
+  `auto-search-button.tsx` (2 Stellen) und `url-import-form.tsx` – begrenzt Länge, ohne Chris die
+  Fehlerdetails ganz zu nehmen (die für einen technischen Ein-Personen-Nutzer tatsächlich nützlich
+  sind).
+- **Stale Kommentar**: `app/api/pipeline/import/route.ts` beschrieb noch "HTTP Basic Auth", obwohl
+  der Auth-Wechsel auf Session-Cookies (siehe Eintrag weiter unten) diesen Kommentar nie
+  nachgezogen hatte – Schwester-Route (`auto-search/route.ts`) hatte den korrekten Text bereits.
+- **`prefers-reduced-motion` global ergänzt** (`app/globals.css`): eine Regel statt
+  Einzelfall-Fixes, kollabiert Animations-/Transition-Dauer auf ~0 für alle aktuellen und
+  zukünftigen Animationen (Karten-Stagger, Thumbnail-Hover-Zoom), ohne an Sichtbarkeit gekoppelte
+  Inhalte leer zu lassen. Schließt den in `DESIGN.md` zuvor offen dokumentierten Punkt.
+
+Build, Lint (0 Fehler) und die volle Testsuite (42/42) nach jeder Änderungsgruppe grün.
+`DESIGN.md`/`.impeccable/design.json` entsprechend nachgezogen.
+
+## [2026-07-08] Impeccable-Setup (PRODUCT.md/DESIGN.md) + Inbox-Kritik: 3 P1-Fixes
+
+`/impeccable init` angelegt: `PRODUCT.md` (Register, Nutzer, Brand-Personality, Anti-Referenzen,
+Accessibility) und `DESIGN.md` + `.impeccable/design.json` (Token-System, Named Rules, Do's/Don'ts)
+aus dem bestehenden Redesign extrahiert. North Star: "Der klare Befund" (Labor-Präzision +
+Apple-iOS-Politur, mit dem Nutzer abgestimmt).
+
+Danach `/impeccable critique` auf die Inbox (`app/page.tsx`) – Dual-Agent-Kritik (unabhängiger
+Design-Review + Detector/Browser-Evidenz). Ergebnis: 24/40 ("Acceptable"), kein AI-Slop. 3 P1s
+identifiziert und in diesem Durchgang direkt behoben:
+
+- **Kein Feedback bei Annehmen/Ablehnen/Erledigt** – Aktionen liefen bisher lautlos, das Kern-Purpose
+  der App ("Chris vertraut der Liste genug, um ohne Nachprüfen zu handeln") bekam an genau dieser
+  Stelle das wenigste Feedback der ganzen App. Fix: `toast.success`/`toast.info`/`toast.error` nach
+  demselben Muster wie `auto-search-button.tsx`, inkl. Error-Handling (vorher unbehandelte Promise-
+  Rejections bei Supabase-Fehlern) – `components/inbox/action-buttons.tsx`.
+- **Annehmen-Button-Kontrast (4,1:1, braucht 4,5:1)**: `--success` von `#1E8E5A` auf `#1A7D4F`
+  nachgeschärft (weiß-auf-Grün jetzt 5,1:1), live per `preview_inspect` gegen den echten
+  computed style verifiziert.
+- **Score-Badge Mittel-Tier-Kontrast (~2,3:1, deutlich unter AA)**: `--warning` von `#C99A02` auf
+  `#7A5F00` nachgeschärft (jetzt ~5,3:1 auf der tonalen Chip-Fläche), live verifiziert.
+
+Beide Token-Änderungen sind rein additiv sicher: `--success` wird sonst nur tonal (Badges,
+Confidence-Checkliste) oder dekorativ (Dots) verwendet, `--warning` nur als dekorativer Dot plus
+genau dieser einen Text-Stelle – keine Regression an anderen Stellen. `DESIGN.md` und
+`.impeccable/design.json` entsprechend mit den neuen Hex-Werten aktualisiert, damit Doku und Code
+nicht auseinanderlaufen.
+
+**Bewusst nicht umgesetzt**: ein "Rückgängig"-Undo für Ablehnen wäre nur ein Status-Rollback ohne
+Rücknahme der bereits angewendeten Adaptive-Ranking-Gewichtsanpassung (`applyAdaptiveRanking`) –
+ein halb-korrektes Undo wäre irreführender als gar keines. Zurückgestellt, siehe IDEAS.md.
+
+Im Anschluss beide P2s aus derselben Kritik direkt umgesetzt:
+
+- **Listenansicht → "Klarer Befund"-Identität**: Card-Chrome (`rounded-3xl border bg-card` +
+  Border-Hover) komplett entfernt. Zeilen jetzt Full-Bleed (`-mx-4 px-4`/`-mx-6 px-6`) mit
+  `hover:bg-muted/40` statt Border-Farbwechsel, getrennt durch `divide-y divide-border` am
+  Listen-Container statt eigener Card-Border. `ScoreBadge` vereinheitlicht: Liste und Detailseite
+  teilen sich jetzt dieselbe nackte-Zahl-Sprache (kein Chip mehr), nur die Größe unterscheidet
+  (`text-2xl` Liste, `text-6xl` weiterhin exklusiv Detailseite – "Die Eine-Zahl-Regel" bleibt
+  intakt). `DESIGN.md`/`.impeccable/design.json` entsprechend nachgezogen. Live auf Desktop und
+  Mobile (375px) geprüft.
+- **Keyboard-Shortcuts für die tägliche Triage** (`components/inbox/keyboard-triage.tsx`, neu):
+  Zeile hovern, dann `a`=annehmen, `1`-`4`=ablehnen mit Grund, `d`=erledigt (bei Angenommen).
+  Hover- statt Fokus-gebunden (passt zum bestehenden Maus-Workflow, keine separate
+  Roving-Tabindex-Navigation nötig), mit Tipp-Zeile über der Liste für Entdeckbarkeit. Guard gegen
+  Eingabefelder (Shortcuts feuern nicht, während z. B. das URL-Import-Feld fokussiert ist) – live
+  geprüft: Hover+Taste akzeptiert/lehnt ab wie erwartet, Hover+Taste bei fokussiertem Input-Feld
+  bewusst wirkungslos.
+  **Bewusst nicht umgesetzt**: echtes Multi-Select/Bulk-Reject (Checkboxen, Auswahl-Toolbar) – die
+  Kritik nannte "Keyboard-/Bulk-Aktionen" in einem Punkt, aber Bulk-UI ist ein eigenständiges
+  Feature mit echtem State-Management-Aufwand, das der "morgen früh benutzen"-Bar für eine
+  Demo-Liste von 15-20 Einträgen nicht klar genug gerecht wird. Einzel-Zeilen-Shortcuts lösen die
+  eigentliche Ineffizienz (kein Maus-Klick-Zwang) ohne dieses Risiko.
+
 ## [2026-07-08] Filter-Labels, Kontrast-Bugs, Auto-Search-Button, Leerzustand, Import-Form-Höhe
 
 Fünf Nutzer-gemeldete Punkte in einem Batch behoben.

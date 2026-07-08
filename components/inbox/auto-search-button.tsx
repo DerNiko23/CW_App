@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { truncateMessage } from "@/lib/format";
 import type { DiscoveryProgressEvent } from "@/lib/pipeline/discovery";
 
 type StreamEvent = DiscoveryProgressEvent | { type: "error"; error: string };
@@ -56,7 +57,7 @@ export function AutoSearchButton() {
       }
 
       if (errorMessage) {
-        toast.error(`Suche fehlgeschlagen: ${errorMessage}`);
+        toast.error(`Suche fehlgeschlagen: ${truncateMessage(errorMessage)}`);
       } else {
         const finalCount = doneEvent?.foundCount ?? lastFoundCount;
         if (finalCount === 0) {
@@ -69,7 +70,7 @@ export function AutoSearchButton() {
         router.refresh();
       }
     } catch (err) {
-      toast.error(`Suche fehlgeschlagen: ${(err as Error).message}`);
+      toast.error(`Suche fehlgeschlagen: ${truncateMessage((err as Error).message)}`);
     } finally {
       setIsSearching(false);
     }

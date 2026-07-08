@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-08T00:00:00Z",
+  "title": "Design System: Faktencheck-Inbox",
+  "extensions": {
+    "colorMeta": {
+      "deep-teal": {
+        "role": "primary",
+        "displayName": "Deep Teal",
+        "canonical": "#0B7A6A",
+        "tonalRamp": ["#042E28", "#073F37", "#095646", "#0B7A6A", "#189685", "#3FB3A0", "#7FD1C3", "#C6EEE6"]
+      },
+      "off-white": {
+        "role": "neutral",
+        "displayName": "Off-White",
+        "canonical": "#FAFAFA",
+        "tonalRamp": ["#1A1A1A", "#333333", "#666666", "#999999", "#CCCCCC", "#E5E5E5", "#F2F2F2", "#FAFAFA"]
+      },
+      "fast-schwarz": {
+        "role": "neutral",
+        "displayName": "Fast-Schwarz",
+        "canonical": "#141414",
+        "tonalRamp": ["#0A0A0A", "#141414", "#262626", "#3D3D3D", "#595959", "#7A7A7A", "#A6A6A6", "#D9D9D9"]
+      },
+      "signal-gruen": {
+        "role": "tertiary",
+        "displayName": "Signal-Grün",
+        "canonical": "#1A7D4F",
+        "tonalRamp": ["#08281A", "#0D3B26", "#125934", "#1A7D4F", "#279C66", "#5AB98A", "#96D6B6", "#D2EFE0"]
+      },
+      "signal-amber": {
+        "role": "tertiary",
+        "displayName": "Signal-Amber",
+        "canonical": "#7A5F00",
+        "tonalRamp": ["#2E2400", "#453600", "#5F4A00", "#7A5F00", "#9B7A00", "#C29E1F", "#DDC066", "#F3E6B0"]
+      },
+      "signal-rost": {
+        "role": "tertiary",
+        "displayName": "Signal-Rost",
+        "canonical": "#B03A26",
+        "tonalRamp": ["#3D140D", "#571C13", "#7A2A1B", "#B03A26", "#CC5A42", "#DD8672", "#EBB2A4", "#F6DBD3"]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#E3E3E3",
+        "tonalRamp": ["#0D0D0D", "#292929", "#4D4D4D", "#7A7A7A", "#A6A6A6", "#CFCFCF", "#E3E3E3", "#F5F5F5"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Score-Zahl", "purpose": "Ausschließlich die Opportunity-Score-Zahl auf der Detailseite. Kein anderes Element darf diese Größe nutzen." },
+      "headline": { "displayName": "Seiten-Headline", "purpose": "Seiten-H1, immer mit text-balance." },
+      "title": { "displayName": "Titel", "purpose": "Kartentitel, Video-Titel, Score-Chip-Zahl." },
+      "body": { "displayName": "Fließtext", "purpose": "Standardtext, Listen, Beschreibungen." },
+      "label": { "displayName": "Block-Label", "purpose": "Uppercase, tracked Section-Überschriften und Eyebrow – funktionale Wegweiser, keine Marketing-Eyebrows." },
+      "mono": { "displayName": "Zeitstempel", "purpose": "Ausschließlich für Video-Timecodes." }
+    },
+    "shadows": [
+      { "name": "overlay", "value": "0 4px 12px rgba(20,20,20,0.08), inset 0 0 0 1px rgba(20,20,20,0.1)", "purpose": "Popover- und Select-Dropdowns – die einzige Stelle mit echtem Schatten, weil sie tatsächlich über dem Inhalt schweben." }
+    ],
+    "motion": [
+      { "name": "list-stagger", "value": "fade-in + slide-in-from-bottom-2, 500ms, delay = min(index,8) * 40ms", "purpose": "Inbox-Karten beim ersten Laden." },
+      { "name": "hover-standard", "value": "transition-colors/all 150-300ms ease", "purpose": "Buttons, Karten-Border, Thumbnail-Scale." },
+      { "name": "press-feedback", "value": "translateY(1px) on :active", "purpose": "Tastendruck-Gefühl auf Buttons, kein Scale/Schatten." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Standard-Aktionsbutton, Fast-Schwarz-Fläche. Der Default für alles außer Ampel-gebundene Aktionen.",
+      "html": "<button class=\"ds-btn-primary\">Anmelden</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; height: 2rem; padding: 0 0.625rem; background: #141414; color: #FAFAFA; font-family: 'Inter', sans-serif; font-size: 0.875rem; font-weight: 500; border: 1px solid transparent; border-radius: 2.4px; cursor: pointer; transition: background 0.15s ease, transform 0.1s ease; } .ds-btn-primary:hover { background: rgba(20,20,20,0.8); } .ds-btn-primary:focus-visible { outline: none; border-color: #0B7A6A; box-shadow: 0 0 0 3px rgba(11,122,106,0.5); } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Accept Button",
+      "kind": "button",
+      "refersTo": "button-accept",
+      "description": "Einzige primäre Aktionsfläche, die eine Ampelfarbe trägt – weil sie selbst Teil der Score-Entscheidung ist.",
+      "html": "<button class=\"ds-btn-accept\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\"><polyline points=\"20 6 9 17 4 12\"/></svg>Annehmen</button>",
+      "css": ".ds-btn-accept { display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; height: 2rem; padding: 0 0.625rem; background: #1A7D4F; color: #FFFFFF; font-family: 'Inter', sans-serif; font-size: 0.875rem; font-weight: 500; border: none; border-radius: 2.4px; cursor: pointer; transition: background 0.15s ease, transform 0.1s ease; } .ds-btn-accept:hover { background: #145f3d; } .ds-btn-accept:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "status-pill",
+      "description": "Tag-Semantik, bewusste Ausnahme von der scharfen Radius-Regel – bleibt rund.",
+      "html": "<span class=\"ds-pill ds-pill--accepted\">Angenommen</span>",
+      "css": ".ds-pill { display: inline-flex; align-items: center; padding: 0.125rem 0.625rem; border-radius: 9999px; font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 500; white-space: nowrap; } .ds-pill--accepted { background: rgba(11,122,106,0.15); color: #0B7A6A; border: 1px solid rgba(11,122,106,0.3); }"
+    },
+    {
+      "name": "Score Hero (Signature)",
+      "kind": "custom",
+      "refersTo": "score-badge-hero",
+      "description": "Detailseiten-Signature-Element: die nackte Score-Zahl ohne Chip, in Ampelfarbe.",
+      "html": "<div class=\"ds-score-hero\"><span class=\"ds-score-hero__number\">87</span><span class=\"ds-score-hero__label\"><span class=\"ds-score-hero__dot\"></span>Sehr hohe Priorität</span></div>",
+      "css": ".ds-score-hero { display: inline-flex; flex-direction: column; gap: 0.25rem; } .ds-score-hero__number { font-family: 'Space Grotesk', sans-serif; font-size: 3.75rem; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; color: #1A7D4F; } .ds-score-hero__label { display: flex; align-items: center; gap: 0.375rem; font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: #737373; } .ds-score-hero__dot { width: 0.5rem; height: 0.5rem; border-radius: 9999px; background: #1A7D4F; }"
+    },
+    {
+      "name": "Score Compact (Liste)",
+      "kind": "custom",
+      "refersTo": "score-chip",
+      "description": "Kompakte Score-Anzeige für die Listenzeile – seit 2026-07-08 dieselbe nackte-Zahl-Sprache wie die Detailseite, nur kleiner (text-2xl statt text-6xl). Kein Chip, kein Hintergrund, keine Border.",
+      "html": "<span class=\"ds-score-compact\">62</span>",
+      "css": ".ds-score-compact { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; color: #1A7D4F; }"
+    },
+    {
+      "name": "Video Row",
+      "kind": "custom",
+      "refersTo": "card-video",
+      "description": "Primäre Listenzeile der Inbox (seit 2026-07-08 kein Card-Chrome mehr): Thumbnail, Titel, Zitat, Meta-Zeile, nackte Score-Zahl. Full-Bleed-Hover statt Border, Hairline-Trennung zwischen Zeilen via divide-y am Listen-Container.",
+      "html": "<article class=\"ds-row\"><div class=\"ds-row__thumb\"></div><div class=\"ds-row__body\"><p class=\"ds-row__channel\">Kanal-Name</p><h3 class=\"ds-row__title\">Videotitel hier</h3><blockquote class=\"ds-row__quote\">„Honig macht nicht dick.“</blockquote></div></article>",
+      "css": ".ds-row { display: flex; gap: 1.25rem; padding: 1.25rem 1.5rem; margin: 0 -1.5rem; border-radius: 0; transition: background-color 0.2s ease; } .ds-row:hover { background: rgba(240,240,240,0.4); } .ds-row__thumb { width: 10rem; aspect-ratio: 16/9; flex-shrink: 0; border-radius: 3.36px; background: #F0F0F0; } .ds-row__body { min-width: 0; flex: 1; } .ds-row__channel { font-family: 'Inter', sans-serif; font-size: 0.75rem; color: #737373; margin: 0; } .ds-row__title { font-family: 'Space Grotesk', sans-serif; font-size: 1rem; font-weight: 600; color: #141414; margin: 0.125rem 0 0; } .ds-row__quote { margin: 0.5rem 0 0; padding-left: 0.75rem; border-left: 2px solid #0B7A6A; font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 500; line-height: 1.3; color: #141414; }"
+    },
+    {
+      "name": "Confidence Check Item",
+      "kind": "custom",
+      "refersTo": "confidence-checklist",
+      "description": "Zeile der Confidence-Checkliste – nur echte, durchgeführte Checks (MASTERPLAN §3.2C).",
+      "html": "<div class=\"ds-check ds-check--passed\"><span class=\"ds-check__icon\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\"><polyline points=\"20 6 9 17 4 12\"/></svg></span><span class=\"ds-check__label\">Mythos in Datenbank gematcht</span></div>",
+      "css": ".ds-check { display: flex; align-items: center; gap: 0.625rem; font-family: 'Inter', sans-serif; font-size: 0.875rem; } .ds-check__icon { display: flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; border-radius: 9999px; flex-shrink: 0; } .ds-check--passed .ds-check__icon { background: rgba(26,125,79,0.15); color: #1A7D4F; } .ds-check--passed .ds-check__label { color: #141414; }"
+    },
+    {
+      "name": "Reaction Builder Panel (Signature)",
+      "kind": "custom",
+      "refersTo": "reaction-builder-panel",
+      "description": "Einzige Komponente mit dickem Akzentstreifen (border-top 4px) – markiert den 'stark, aber nicht vorgeschrieben'-Teil der App.",
+      "html": "<section class=\"ds-reaction-panel\"><div class=\"ds-reaction-panel__head\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"#0B7A6A\" stroke-width=\"2\"><path d=\"M12 3v18M3 12h18\"/></svg><h2 class=\"ds-reaction-panel__title\">Reaktions-Baukasten</h2></div></section>",
+      "css": ".ds-reaction-panel { padding: 1.25rem; background: #FFFFFF; border: 1px solid #E3E3E3; border-top: 4px solid #0B7A6A; } .ds-reaction-panel__head { display: flex; align-items: center; gap: 0.5rem; } .ds-reaction-panel__title { font-family: 'Space Grotesk', sans-serif; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: #141414; margin: 0; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Standard-Textfeld (Login-Passwort, URL-Import).",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Passwort\" />",
+      "css": ".ds-input { height: 2.5rem; width: 100%; padding: 0 0.75rem; background: #FFFFFF; border: 1px solid #E3E3E3; border-radius: 2.4px; font-family: 'Inter', sans-serif; font-size: 0.875rem; color: #141414; outline: none; } .ds-input::placeholder { color: #737373; } .ds-input:focus-visible { border-color: #0B7A6A; box-shadow: 0 0 0 3px rgba(11,122,106,0.5); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Der klare Befund",
+    "overview": "Die App ist kein Dashboard, das um Aufmerksamkeit wirbt – sie liefert einen Befund, so wie ein Laborbericht: nüchtern, einzeln nachvollziehbar, ohne Interpretationsspielraum. Aber Befund heißt nicht steril. Die Referenz ist iOS auf seinem präzisesten: klinisch sauber in der Ausführung – scharfe Kanten, echte Kontraste, kein Weichzeichner – aber warm genug in der Handwerklichkeit (Hover-States, Timing, Großzügigkeit im Weißraum), dass es sich wie ein durchdachtes Produkt anfühlt statt wie ein Formular. Präzision ist hier eine Qualität, kein Verzicht. Bewusst verworfen (Design-Richtung B, siehe CHANGELOG 2026-07-07): warmes Creme/Amber, rounded-3xl überall, kursive Serif-Zitate, weiche Radial-Gradient-Blobs. Dieser Look ist der bekannteste KI-Generierungs-Default und liest sich wie ein Wellness-Blog – das genaue Gegenteil eines Werkzeugs, dem man morgens ungeprüft vertraut.",
+    "keyCharacteristics": [
+      "Neutrale Fläche (Off-White/Fast-Schwarz), ein einziger Marken-Akzent (Deep Teal), strikt getrennt von der Ampel-Statuslogik (Grün/Amber/Rot).",
+      "Scharfe statt runde Kanten (2–6px), Hairline-Trenner statt Card-Nesting auf der Detailseite.",
+      "Ein visuelles Signature-Element: die nackte Score-Zahl in Space Grotesk – kein Chip, keine Hülle.",
+      "Ruhig und selbstsicher: keine Dringlichkeits-Chrome außer der Ampel-Logik selbst; das UI konkurriert nie mit den Daten."
+    ],
+    "rules": [
+      { "name": "Die Ein-Akzent-Regel", "body": "Deep Teal ist Marke, nicht Status. Grün/Amber/Rot sind Status, nicht Marke. Eine Fläche bekommt nie beide Bedeutungen gleichzeitig zugewiesen – das war ein realer Bug vor dem Redesign (Score-Mid-Tier nutzte fälschlich die Akzentfarbe) und darf nicht zurückkehren.", "section": "colors" },
+      { "name": "Die Ampel-ist-nie-allein-Regel", "body": "Farbcodierte Status (Score-Tier, Confidence-Tier) sind nie die alleinige Bedeutungsträgerin. Immer mit Zahl, Text oder Icon kombiniert (WCAG AA, Rot-Grün-Sehschwäche).", "section": "colors" },
+      { "name": "Die Eine-Zahl-Regel", "body": "text-6xl Space Grotesk ist ausschließlich für die Score-Zahl reserviert. Kein anderes Element der App darf so groß gesetzt werden.", "section": "typography" },
+      { "name": "Die Flach-außer-Overlay-Regel", "body": "Wenn es nicht über dem Inhalt schwebt, hat es keinen Schatten. Tiefe wird nur simuliert, wo sie technisch wahr ist (Popover, Dropdown), nie als Stilmittel auf Cards oder Buttons.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do Deep Teal (#0B7A6A) ausschließlich für Marke/Aktion/Fokus verwenden – nie für Status.",
+      "Do Ampel-Farbe (Grün/Amber/Rost) immer mit Zahl, Text oder Icon kombinieren, nie als alleinigen Bedeutungsträger (Rot-Grün-Sehschwäche, WCAG AA).",
+      "Do neue Sections mit Hairline-border-t + großzügigem Weißraum trennen statt mit Card-Chrome, sobald es sich um sequenzielle Inhaltsblöcke (nicht Listen-Items) handelt.",
+      "Do die Score-Zahl als einziges text-6xl-Element behandeln – kein anderes UI-Element darf mit ihr um Größe konkurrieren.",
+      "Do neue primäre Aktionsflächen in Fast-Schwarz halten; Farbe nur einsetzen, wenn die Aktion selbst Teil der Ampel-Entscheidung ist (wie 'Annehmen').",
+      "Do neue Animationen unter der globalen prefers-reduced-motion-Regel in globals.css belassen (seit Polish 2026-07-08) – keine Einzelfall-Ausnahmen einführen."
+    ],
+    "donts": [
+      "Don't zur warmen Creme-/Amber-Palette, rounded-3xl-Rundungen überall, kursiven Serif-Zitaten oder Radial-Gradient-Blobs zurückkehren (Design-Richtung B, explizit verworfen).",
+      "Don't Deep Teal für Status-Bedeutung verwenden (das war der Bug vor dem Redesign: Mid-Tier nutzte fälschlich die Akzentfarbe statt Amber).",
+      "Don't Schatten auf Cards, Buttons oder Sections einsetzen – Schatten sind ausschließlich für Overlays (Popover/Select) reserviert.",
+      "Don't neue Fähigkeiten visuell suggerieren, die die Pipeline nicht wirklich prüft (z. B. eine 'Ironie erkannt'-Badge).",
+      "Don't die Ein-Signal-ein-Ort-Regel brechen: Score und Confidence haben je eine einzige autoritative Anzeige-Stelle pro Screen."
+    ]
+  }
+}

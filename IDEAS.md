@@ -22,6 +22,10 @@
 - Podcast-Quellen (Spotify/RSS + Transkription)
 
 ## Workflow
+- **Rückgängig für Ablehnen**: reiner Status-Rollback (zurück auf "new") würde die bereits
+  angewendete Adaptive-Ranking-Gewichtsanpassung (`applyAdaptiveRanking`) nicht zurücknehmen –
+  ein Undo, das nur den Status zurücksetzt, aber die Gewichte verändert lässt, wäre irreführender
+  als gar kein Undo. Erst sinnvoll, wenn `applyAdaptiveRanking` eine echte Umkehrfunktion bekommt.
 - Slack/E-Mail-Digest: "Deine Top 3 heute Morgen"
 - Kalender-Integration: Angenommenes Video → Drehtermin
 - Team-Fähigkeit (Mehrbenutzer, Rollen) – aktuell bewusst Ein-Personen-Tool

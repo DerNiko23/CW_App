@@ -62,7 +62,10 @@ Videos/Claims/Myths/Snapshots/Weights und berechnet Score/Novelty pro Video mit 
   "False Positives sind der teuerste Fehler"), bleibt aber über den Status-Filter "Alle"
   einsehbar – nicht komplett versteckt, nur nicht in der aktiven Queue.
 - **Accept/Reject/Erledigt** sind Server Actions (`app/actions.ts`), aufgerufen aus
-  `components/inbox/action-buttons.tsx`; schreiben `videos.status` + `feedback`-Tabelle.
+  `components/inbox/action-buttons.tsx` (Maus) oder `components/inbox/keyboard-triage.tsx`
+  (Tastatur: Zeile hovern, `a`/`1`-`4`/`d` – Power-User-Shortcut für die tägliche Triage, siehe
+  CHANGELOG 2026-07-08); schreiben `videos.status` + `feedback`-Tabelle. Beide Pfade bestätigen per
+  Toast (`sonner`).
 - **"Bereits behandelt"**: die Badge zeigt nur an, wenn ein *anderes* Video mit demselben
   `myth_id` bereits `status = done` ist. Der Opportunity-Score (Novelty-Faktor) sinkt zusätzlich,
   wenn `myths.covered_by_chris` (manuell gepflegte Startliste) oder `myths.topic_deprioritized`
@@ -71,8 +74,10 @@ Videos/Claims/Myths/Snapshots/Weights und berechnet Score/Novelty pro Video mit 
   sagen. `topic_deprioritized` bedeutet nur "uninteressant", nicht "erledigt", und bekommt
   deshalb einen eigenen, ehrlichen Text (`lib/inbox/scoreBullets.ts`) - sonst würde die App eine
   Erledigung behaupten, die nie stattfand.
-- **Design**: eigene Farbpalette (warmes Off-White/Charcoal/Amber, konsistent mit der
-  E-Book-Richtung) statt Standard-shadcn-Grau, siehe `app/globals.css`.
+- **Design**: eigenes Token-System (neutrales Off-White/Fast-Schwarz, ein Deep-Teal-Akzent, echte
+  Ampel-Logik, scharfe Radien) statt Standard-shadcn-Grau, siehe `app/globals.css` und `DESIGN.md`.
+  Die Listenansicht teilt sich seit 2026-07-08 dieselbe kartenlose, hairline-getrennte Sprache wie
+  die Detailseite (siehe CHANGELOG).
 
 ## Reaktions-Baukasten (`lib/reaction/`, `components/inbox/reaction-builder.tsx`)
 

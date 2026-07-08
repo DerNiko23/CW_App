@@ -16,3 +16,11 @@ export function formatDate(iso: string | null): string {
     year: "numeric",
   }).format(new Date(iso));
 }
+
+// Kappt rohe Server-/Exception-Messages, bevor sie ungefiltert in Toasts oder
+// Inline-Fehlertexten landen (Kritik 2026-07-08: Fehlermeldungen sollen
+// hilfreich sein, nicht rohe interne Details unbegrenzt durchreichen).
+export function truncateMessage(message: string, maxLength = 160): string {
+  if (message.length <= maxLength) return message;
+  return `${message.slice(0, maxLength - 1)}…`;
+}

@@ -11,7 +11,11 @@ export function LoginForm() {
 
   return (
     <form action={formAction} className="flex w-full max-w-xs flex-col gap-3">
+      <label htmlFor="login-password" className="sr-only">
+        Passwort
+      </label>
       <input
+        id="login-password"
         type="password"
         name="password"
         placeholder="Passwort"
