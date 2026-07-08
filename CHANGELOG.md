@@ -1,5 +1,60 @@
 # CHANGELOG
 
+## [2026-07-08] URL-Import ebenfalls betroffen, ehrliche Fehlermeldungen, DB-Bereinigung
+
+**URL-Import ist kein sicherer Fallback – rigoros bestätigt.** Auf Nutzeranfrage vor jeder
+weiteren Änderung geprüft, ob das gelegentliche "Kein Transkript verfügbar" beim URL-Import
+auch lokal auftritt (Fall A: echtes Fehlen von Untertiteln, kein Bug) oder nur auf Vercel
+(Fall B: derselbe Bug wie Auto-Search). Ergebnis mit 4 verschiedenen Video-IDs, jeweils
+gleichzeitig lokal und live auf Vercel getestet: **4 von 4 lokal erfolgreich, 4 von 4 auf
+Vercel gescheitert** – eindeutig Fall B. `processVideoByUrl` (`lib/pipeline/import.ts`) ruft
+denselben `processVideo` → `fetchTranscript`-Pfad wie Auto-Search auf, daher exakt derselbe
+Bug. Gesamtbilanz über beide Wege: **18 von 18** bekanntermaßen-vorhandenen Transkripten
+scheitern auf Vercel. Das ändert die Ausgangslage: URL-Import war als "funktionierender
+Fallback" angenommen worden, ist es aber nicht – aktuell gibt es auf Vercel keinen
+zuverlässigen Weg, ein neues YouTube-Video mit Transkript hinzuzufügen.
+
+**Entscheidung: als bekannte Einschränkung dokumentieren statt Proxy-Dienst.** Keine laufenden
+Kosten vor der Einreichung rechtfertigbar (Bewerbungsprojekt, feste Deadline), die 18
+kuratierten Demo-Videos decken die Kernfunktionalität bereits ab. Details/Begründung in
+README.md ("Bekannte Einschränkung: YouTube blockiert Transkript-Abrufe von Cloud-Servern").
+
+**Ehrliche Fehlermeldungen statt stillem Fail oder Fachjargon** (`components/inbox/auto-search-button.tsx`,
+`components/inbox/url-import-form.tsx`): Auto-Search zeigte bei 0 Treffern bisher immer
+"Keine neuen Treffer" – irreführend, wenn in Wahrheit *jeder* geprüfte Kandidat am
+Transkript-Block gescheitert ist, statt dass es einfach keine neuen Funde gab. Erkennt jetzt
+(clientseitig, aus dem bereits gestreamten `summary.results`), wenn alle geprüften Kandidaten
+mit `no_transcript` übersprungen wurden, und zeigt dann gezielt: "YouTube blockiert
+Transkript-Abrufe von diesem Server. Aktuell können dadurch keine neuen Videos automatisch
+gefunden werden." URL-Import bekommt dieselbe Kernaussage für den Einzelvideo-Fall statt der
+alten, irreführenden "Kein Transkript verfügbar für dieses Video." (die faelschlich ein
+Problem mit dem konkreten Video suggerierte, obwohl es fast immer der Server-Host ist).
+
+**Datenbereinigung der Produktions-Inbox** (kein Code, nur DB – siehe TASKS.md/Nutzeranfrage):
+Audit ergab 104 Videos gesamt (45 "Neu" roh / 5 tatsächlich sichtbar nach Confidence-Filter,
+10 "Angenommen", 3 "Erledigt", 46 "Abgelehnt") statt der erwarteten ~13-16 kuratierten. Ursache:
+mehrere Feature-Test-Durchläufe (Keyboard-Shortcuts, Action-Buttons, Auto-Search-Button-Test)
+haben im Verlauf der Entwicklung reale Warteschlangen-Videos als Testobjekte benutzt und dabei
+deren Status verändert, ohne dass danach wieder aufgeräumt wurde. Zwei konkrete Funde behoben:
+- Ein "Erledigt"-Video (*FruchtSucht*, externe ID `eS9rs0whtp0`) hatte nur **50 % Confidence**
+  – Verstoß gegen die Kernregel "Confidence < 70 % kommt nicht in die Inbox" (der Filter greift
+  nur bei Status "Neu", nicht bei Angenommen/Erledigt). Direktes DB-Update auf `rejected`
+  (bewusst ohne `applyAdaptiveRanking`, exakt wie beim 42er-Reject vom 2026-07-07), Grund
+  dokumentiert: "Confidence unter Schwelle (50%) - Datenbereinigung 2026-07-08".
+- **5 Feedback-Aktionen von heute, 08:49–09:23 Uhr** (vor dieser Session, engster Zeitcluster
+  über 3 verschiedene Video-Batches hinweg) identifiziert als Test-Artefakte der
+  Keyboard-Shortcut-/Polish-Arbeit von heute Vormittag, nicht als echte Redaktionsentscheidungen
+  – auf Nutzerbestätigung zurück auf `status = new` gesetzt (Gymperium_, "Gesundheit"-Zimt-Video,
+  NaturErwachen, Holistic Medic, 321kochentv), zugehörige Feedback-Zeilen von heute gelöscht.
+- Die übrigen ~7 älteren Angenommen/Erledigt-Einträge (06./07.07, vor bzw. während früherer
+  Feature-Tests) bewusst **nicht** angefasst – ohne klares Signal für "Testartefakt" ist das
+  geringste Risiko, nichts Echtes zu zerstören.
+
+**Ergebnis (live verifiziert):** Sichtbar sind jetzt 10 "Neu" + 6 "Angenommen" + 2 "Erledigt" =
+**18 Videos**, alle mit 100 % Confidence, alle mit echtem Zitat + Timestamp + verifizierter
+Quelle – durchgängig auf dem Niveau der ursprünglichen Kuration. Kein Commit nötig (reine
+DB-Änderung, kein Code betroffen).
+
 ## [2026-07-08] Auto-Search: Retry-Versuch gegen no_transcript
 
 Erster, risikoarmer Versuch gegen den zuvor diagnostizierten Root Cause (siehe Eintrag darunter):

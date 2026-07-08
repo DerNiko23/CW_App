@@ -60,7 +60,21 @@ export function AutoSearchButton() {
         toast.error(`Suche fehlgeschlagen: ${truncateMessage(errorMessage)}`);
       } else {
         const finalCount = doneEvent?.foundCount ?? lastFoundCount;
-        if (finalCount === 0) {
+        const results = doneEvent?.summary.results ?? [];
+        // Bekannte Einschraenkung (CHANGELOG 2026-07-08): YouTube blockiert die
+        // Transkript-Route vermutlich IP-basiert von Cloud-Hosts aus - wenn wirklich
+        // jeder geprüfte Kandidat daran scheitert, ist "Keine neuen Treffer" irreführend
+        // (klingt nach normalem Ergebnis, ist aber ein bekanntes technisches Problem).
+        const allBlockedByTranscript =
+          results.length > 0 &&
+          results.every((r) => r.result.status === "skipped" && r.result.reason === "no_transcript");
+
+        if (finalCount === 0 && allBlockedByTranscript) {
+          toast.error(
+            "YouTube blockiert Transkript-Abrufe von diesem Server. Aktuell können dadurch keine neuen Videos automatisch gefunden werden.",
+            { duration: 8000 },
+          );
+        } else if (finalCount === 0) {
           toast.info("Keine neuen Treffer");
         } else if (finalCount === 1) {
           toast.success("1 neues Video gefunden");

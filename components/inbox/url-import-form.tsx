@@ -12,7 +12,12 @@ type ImportResult =
   | { error: string };
 
 const SKIP_LABELS: Record<string, string> = {
-  no_transcript: "Kein Transkript verfügbar für dieses Video.",
+  // Bekannte Einschraenkung (CHANGELOG 2026-07-08): auf Vercel scheitert der
+  // Transkript-Abruf praktisch immer, auch bei Videos mit echtem Transkript -
+  // vermutlich blockt YouTube Cloud-Server-IPs. "Kein Transkript verfügbar" waere
+  // hier irreführend, weil es ein Problem mit DIESEM Video suggeriert.
+  no_transcript:
+    "YouTube blockiert Transkript-Abrufe von diesem Server. Kein Problem mit diesem Video – aktuell technisch nicht vermeidbar.",
   off_topic: "Video ist themenfremd (kein Ernährung/Fitness/Gesundheit).",
   no_claims: "Keine konkrete Tatsachenbehauptung im Transkript gefunden.",
 };

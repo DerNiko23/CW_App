@@ -107,8 +107,37 @@ MASTERPLAN §5: Formular auf der Inbox, ruft `/api/pipeline/import` auf (volle P
 eine einzelne URL, Backend aus Phase 1). Erfolg → Redirect zur Detailseite, Skip/Fehler →
 Inline-Meldung.
 
+### Bekannte Einschränkung: YouTube blockiert Transkript-Abrufe von Cloud-Servern
+
+**Ursache:** `fetchTranscript` (`lib/pipeline/transcript.ts`) holt Transkripte über die
+inoffizielle YouTube-Route (InnerTube-API/Watch-Page-Scraping, kein API-Key) – dieselbe
+Route, die `youtube-transcript` und vergleichbare Bibliotheken nutzen. YouTube blockt/drosselt
+diese Route erfahrungsgemäß IP-basiert gegen Cloud-/Serverless-Hosts, nicht nur gegen Vercel –
+das betrifft praktisch jeden Hosting-Anbieter, der über Rechenzentrums-IP-Ranges läuft.
+Live verifiziert (2026-07-08): **18 von 18** Video-IDs mit nachweislich vorhandenem Transkript
+scheitern auf Vercel mit `no_transcript`, dieselben IDs funktionieren lokal 18 von 18. Ein
+Retry-Versuch (3 Anläufe mit Delay) wurde getestet und hilft nicht – die Laufzeit verlängert
+sich, das Ergebnis bleibt gleich, was eher für hartes IP-Blocking als für weiches
+Rate-Limiting spricht. Details in CHANGELOG.md (Einträge vom 2026-07-08).
+
+**Was funktioniert:** Alle 18 kuratierten Demo-Videos (Score, Annehmen/Ablehnen/Erledigt,
+Reaktions-Baukasten, Export, Adaptive Ranking) sind bereits importiert und laufen unabhängig
+von diesem Bug – betroffen ist ausschließlich das Hinzufügen *neuer* YouTube-Videos in
+Produktion, sowohl über Auto-Search als auch über den manuellen URL-Import (beide nutzen
+denselben `fetchTranscript`-Code-Pfad). Die App kommuniziert das ehrlich statt eines stillen
+Fails oder einer generischen Fehlermeldung ("YouTube blockiert Transkript-Abrufe von diesem
+Server …", siehe `auto-search-button.tsx`/`url-import-form.tsx`).
+
+**Optionen und Entscheidung:** Ein Proxy-/Residential-IP-Dienst (z. B. ScraperAPI) würde das
+vermutlich zuverlässig lösen, bedeutet aber laufende Kosten. Dagegen entschieden: kein
+laufender Kosten-Posten vor der Einreichung rechtfertigbar für ein Bewerbungsprojekt, und die
+18 kuratierten Demo-Videos decken die Kernfunktionalität bereits vollständig ab – exakt
+dieselbe Abwägung wie bei den TikTok/Instagram-Grenzen (MASTERPLAN §5): ehrlich benennen statt
+verstecken, statt eine laufende Kostenstelle für ein Nice-to-have einzugehen.
+
 ## Prinzipien
 - **"Würde Chris das morgen früh tatsächlich benutzen?"** – sonst streichen.
 - Demo-First: erster Eindruck darf nie von leerer Liste oder Ladezeit abhängen.
-- Ehrlichkeit statt Bluff: keine Ironie-Erkennung versprochen, TikTok/IG-Grenzen offen kommuniziert.
+- Ehrlichkeit statt Bluff: keine Ironie-Erkennung versprochen, TikTok/IG-Grenzen und die
+  YouTube-Transcript-Cloud-Blocking-Einschränkung (s. u.) offen kommuniziert.
 - Kein DevOps-Overhead: jede Tooling-Stunde ist eine gestohlene Design-Stunde.

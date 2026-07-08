@@ -75,13 +75,17 @@
   "Factcheck Inbox" (Deep-Teal, Space Grotesk), Login-Titel auf "Factcheck" angepasst, Export neben
   die Keyboard-Shortcut-Zeile statt eigener Kopfzeile verschoben. Live + Mobile (375px) geprüft.
   Details in CHANGELOG.
-- [ ] ⚠ **Auto-Search findet auf Vercel keine neuen Videos** – Root Cause bestätigt (nicht behoben):
-  `fetchTranscript` scheitert in Produktion bei 14/14 geprüften Kandidaten mit `no_transcript`,
-  dieselben Video-IDs lokal 14/14 erfolgreich. Retry-Versuch (3 Anläufe + Delay, TDD-getestet, live
-  deployed) **live verifiziert und hilft nicht**: Lauf dauerte ~5× länger (Retries laufen
-  nachweislich), Ergebnis blieb 4/4 `no_transcript`. Spricht für hartes IP-Blocking statt weiches
-  Rate-Limiting. Rücksprache nötig: Proxy-Kosten vs. Doku als bekannte Einschränkung vs. alternative
-  Quelle. Details in CHANGELOG.
+- [x] ⚠ **Auto-Search/URL-Import finden auf Vercel keine neuen Videos** – Root Cause bestätigt,
+  Retry getestet (hilft nicht, 18/18 gescheitert vs. 18/18 lokal erfolgreich über beide Wege),
+  URL-Import ist **kein** sicherer Fallback (identischer Bug). Entscheidung: als bekannte
+  Einschränkung dokumentiert (README.md), kein Proxy-Dienst vor der Einreichung (keine
+  laufenden Kosten rechtfertigbar). Ehrliche In-App-Fehlermeldungen statt "Keine neuen Treffer"/
+  "Kein Transkript verfügbar" ergänzt. Details in CHANGELOG.
+- [x] **Produktions-Inbox bereinigt**: Audit fand 104 Videos statt der erwarteten ~13-16
+  (Feature-Test-Artefakte aus mehreren Sessions). Ein Confidence-Regelverstoß (50% in
+  "Erledigt") und 5 heutige Test-Klick-Artefakte korrigiert. Sichtbar jetzt 18 Videos (10 Neu +
+  6 Angenommen + 2 Erledigt), durchgängig 100% Confidence mit echtem Zitat+Timestamp+Quelle.
+  Details in CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt
