@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-07-08] Auto-Search: Retry-Versuch gegen no_transcript
+
+Erster, risikoarmer Versuch gegen den zuvor diagnostizierten Root Cause (siehe Eintrag darunter):
+`fetchTranscript` (`lib/pipeline/transcript.ts`) versucht jetzt bis zu 3× mit 1,5 s Pause dazwischen,
+bevor es aufgibt und `no_transcript` loggt – falls YouTube eher weich rate-limited statt hart per IP
+zu blocken, könnte ein späterer Versuch durchkommen. Kein Kostenrisiko (keine neue Abhängigkeit,
+kein zusätzlicher API-Call), nur etwas mehr Laufzeit pro tatsächlich scheiterndem Kandidaten
+(max. +3 s, nur relevant für die wenigen "neuen" Kandidaten pro Lauf). Retry-Loop (`withRetries`)
+bewusst als generische, von `YoutubeTranscript.*` entkoppelte Funktion gebaut – testbar ganz ohne
+Netzwerk-Mock (3 neue Tests in `transcript.test.ts`, TDD: erst rot gesehen, dann implementiert).
+Noch **nicht live verifiziert, ob es das eigentliche Blocking löst** – das ist der eigentliche Test
+für diesen Versuch, siehe TASKS.md.
+
 ## [2026-07-08] Auto-Search-Diagnose (Root Cause), Titel-Redesign, Export-Umzug
 
 **Auto-Search-Bug untersucht (nicht behoben, siehe unten):** Live auf Vercel per Klick +

@@ -1,10 +1,37 @@
 import { YoutubeTranscript } from "youtube-transcript";
 import type { Transcript, TranscriptSegment } from "./types";
 
-// Holt das Transkript über die inoffizielle YouTube-Timedtext-Route (kein API-Key
-// nötig). Liefert `null` statt zu werfen, wenn kein Transkript existiert oder
-// verfügbar ist – Aufrufer entscheidet, ob/wie geloggt wird (Skip + Log).
-export async function fetchTranscript(videoId: string): Promise<Transcript | null> {
+// Diagnose 2026-07-08 (CHANGELOG): fetchTranscript scheitert auf Vercel bei
+// praktisch allen Kandidaten mit no_transcript, obwohl dieselben Videos lokal
+// zuverlaessig ein Transkript liefern - vermutlich IP-basierte YouTube-Drossel
+// gegen Vercels Serverless-Range. Retry-Versuch (kein Kostenrisiko): 3 Anlaeufe
+// mit kurzem Delay, falls es eher ein weiches Rate-Limit als ein hartes Blocken
+// ist. Wenn das nichts bringt, ist das selbst ein Root-Cause-Datenpunkt.
+const TRANSCRIPT_FETCH_ATTEMPTS = 3;
+const TRANSCRIPT_RETRY_DELAY_MS = 1500;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Generischer Retry-Loop: ruft `attemptFn` bis zu `maxAttempts`-mal auf, wartet
+// `delayMs` zwischen Versuchen, gibt das erste Nicht-null-Ergebnis zurueck oder
+// `null`, wenn alle Versuche `null` liefern. Isoliert von `YoutubeTranscript.*`
+// testbar, ohne echte Netzwerk-/Timer-Wartezeit in Tests zu brauchen.
+export async function withRetries<T>(
+  attemptFn: () => Promise<T | null>,
+  maxAttempts: number,
+  delayMs: number,
+): Promise<T | null> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const result = await attemptFn();
+    if (result !== null) return result;
+    if (attempt < maxAttempts) await sleep(delayMs);
+  }
+  return null;
+}
+
+async function fetchTranscriptOnce(videoId: string): Promise<Transcript | null> {
   try {
     const raw = await YoutubeTranscript.fetchTranscript(videoId, { lang: "de" });
     return toTranscript(raw);
@@ -17,6 +44,13 @@ export async function fetchTranscript(videoId: string): Promise<Transcript | nul
       return null;
     }
   }
+}
+
+// Holt das Transkript über die inoffizielle YouTube-Timedtext-Route (kein API-Key
+// nötig). Liefert `null` statt zu werfen, wenn kein Transkript existiert oder
+// verfügbar ist – Aufrufer entscheidet, ob/wie geloggt wird (Skip + Log).
+export async function fetchTranscript(videoId: string): Promise<Transcript | null> {
+  return withRetries(() => fetchTranscriptOnce(videoId), TRANSCRIPT_FETCH_ATTEMPTS, TRANSCRIPT_RETRY_DELAY_MS);
 }
 
 function toTranscript(

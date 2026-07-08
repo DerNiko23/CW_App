@@ -76,11 +76,13 @@
   die Keyboard-Shortcut-Zeile statt eigener Kopfzeile verschoben. Live + Mobile (375px) geprüft.
   Details in CHANGELOG.
 - [ ] ⚠ **Auto-Search findet auf Vercel keine neuen Videos** – Root Cause bestätigt (nicht behoben):
-  `fetchTranscript` scheitert in Produktion bei 9/9 geprüften Kandidaten mit `no_transcript`,
-  dieselben 9 Video-IDs lokal 9/9 erfolgreich. Sehr wahrscheinlich blockt YouTube Vercels
-  Serverless-IP-Range für die inoffizielle `youtube-transcript`-Scraping-Route. Fix braucht
-  Rücksprache (Proxy-Kosten vs. Doku als bekannte Einschränkung vs. alternative Quelle) – Details
-  in CHANGELOG.
+  `fetchTranscript` scheitert in Produktion bei 10/10 geprüften Kandidaten mit `no_transcript`,
+  dieselben Video-IDs lokal 10/10 erfolgreich. Sehr wahrscheinlich blockt YouTube Vercels
+  Serverless-IP-Range für die inoffizielle `youtube-transcript`-Scraping-Route. Erster Versuch:
+  Retry mit 3 Anläufen + Delay (`withRetries` in `transcript.ts`, TDD-getestet) – **noch live auf
+  Vercel verifizieren, ob das das Blocken umgeht** (nächster Schritt). Falls nicht: Rücksprache
+  nötig (Proxy-Kosten vs. Doku als bekannte Einschränkung vs. alternative Quelle). Details in
+  CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt
