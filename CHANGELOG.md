@@ -10,8 +10,18 @@ kein zusätzlicher API-Call), nur etwas mehr Laufzeit pro tatsächlich scheitern
 (max. +3 s, nur relevant für die wenigen "neuen" Kandidaten pro Lauf). Retry-Loop (`withRetries`)
 bewusst als generische, von `YoutubeTranscript.*` entkoppelte Funktion gebaut – testbar ganz ohne
 Netzwerk-Mock (3 neue Tests in `transcript.test.ts`, TDD: erst rot gesehen, dann implementiert).
-Noch **nicht live verifiziert, ob es das eigentliche Blocking löst** – das ist der eigentliche Test
-für diesen Versuch, siehe TASKS.md.
+**Live auf Vercel verifiziert – Ergebnis: hilft nicht.** Nach Deploy (GitHub-Commit-Status
+`Vercel: Deployment has completed` bestätigt) erneut 4 neue Kandidaten live getestet. Der komplette
+Auto-Search-Lauf brauchte 41,2 s (zuvor, ohne Retry, lief ein vergleichbarer Lauf mit mehr
+Kandidaten in unter 8 s) – die Retry-Delays laufen also nachweislich, sind aber wirkungslos: **4 von
+4 weiterhin `no_transcript`** auf Vercel, dieselben 4 Video-IDs lokal weiterhin 4 von 4 erfolgreich
+(15–312 Segmente). Damit steigt die Gesamtbilanz auf 14 von 14 gescheiterten Kandidaten in
+Produktion vs. 14 von 14 erfolgreich lokal. Die ~5-fach längere Laufzeit bei identischem Ergebnis
+spricht eher für ein hartes IP-Blocking als für weiches Rate-Limiting, das sich innerhalb weniger
+Sekunden Pause erholt – Retry mit längerem Delay würde am Kernproblem also vermutlich nichts ändern.
+Retry-Code bleibt drin (kostenlos, harmlos, leicht robuster gegen echte Transienten), löst aber
+nicht den eigentlichen Bug. Nächster Schritt liegt bei den verbleibenden Optionen (Proxy vs.
+Doku als bekannte Einschränkung vs. alternative Quelle) – siehe TASKS.md.
 
 ## [2026-07-08] Auto-Search-Diagnose (Root Cause), Titel-Redesign, Export-Umzug
 
