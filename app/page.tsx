@@ -32,15 +32,9 @@ export default async function InboxPage({
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 sm:py-12">
-      <header className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <p className="text-xs font-medium tracking-[0.14em] text-accent uppercase">
-            Faktencheck-Inbox
-          </p>
-          <ExportLinks />
-        </div>
-        <h1 className="font-heading text-2xl font-semibold text-balance sm:text-3xl">
-          Lohnt es sich, dazu heute ein Video aufzunehmen?
+      <header>
+        <h1 className="font-heading text-3xl font-semibold text-accent sm:text-4xl">
+          Factcheck Inbox
         </h1>
       </header>
 
@@ -49,6 +43,22 @@ export default async function InboxPage({
       <div className="flex flex-wrap items-end justify-between gap-2">
         <FilterBar />
         <AutoSearchButton />
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          {items.length > 0 && (
+            <>
+              Video hovern: <kbd className="rounded border border-border px-1 py-0.5 font-mono">a</kbd>{" "}
+              annehmen ·{" "}
+              <kbd className="rounded border border-border px-1 py-0.5 font-mono">1</kbd>–
+              <kbd className="rounded border border-border px-1 py-0.5 font-mono">4</kbd> ablehnen mit
+              Grund · <kbd className="rounded border border-border px-1 py-0.5 font-mono">d</kbd>{" "}
+              erledigt
+            </>
+          )}
+        </p>
+        <ExportLinks />
       </div>
 
       {items.length === 0 ? (
@@ -68,14 +78,6 @@ export default async function InboxPage({
         </div>
       ) : (
         <KeyboardTriageProvider>
-          <p className="text-xs text-muted-foreground">
-            Video hovern: <kbd className="rounded border border-border px-1 py-0.5 font-mono">a</kbd>{" "}
-            annehmen ·{" "}
-            <kbd className="rounded border border-border px-1 py-0.5 font-mono">1</kbd>–
-            <kbd className="rounded border border-border px-1 py-0.5 font-mono">4</kbd> ablehnen mit
-            Grund · <kbd className="rounded border border-border px-1 py-0.5 font-mono">d</kbd>{" "}
-            erledigt
-          </p>
           <div className="flex flex-col divide-y divide-border">
             {items.map((item, index) => (
               <TriageRow

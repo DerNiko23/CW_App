@@ -71,6 +71,16 @@
 - [x] `/impeccable audit` (ganze App, 5 Dimensionen): 16/20 ("Good"). 3 neue A11y-Funde behoben
   (Kontrast `--destructive`, Screenreader-Label auf Score-Zahl, Labels auf 2 Inputs) – Details in
   CHANGELOG. Build/Lint/Tests grün.
+- [x] Titel-Redesign: kleine Caption + Fließtext-Satz ersetzt durch linksbündigen, großen Titel
+  "Factcheck Inbox" (Deep-Teal, Space Grotesk), Login-Titel auf "Factcheck" angepasst, Export neben
+  die Keyboard-Shortcut-Zeile statt eigener Kopfzeile verschoben. Live + Mobile (375px) geprüft.
+  Details in CHANGELOG.
+- [ ] ⚠ **Auto-Search findet auf Vercel keine neuen Videos** – Root Cause bestätigt (nicht behoben):
+  `fetchTranscript` scheitert in Produktion bei 9/9 geprüften Kandidaten mit `no_transcript`,
+  dieselben 9 Video-IDs lokal 9/9 erfolgreich. Sehr wahrscheinlich blockt YouTube Vercels
+  Serverless-IP-Range für die inoffizielle `youtube-transcript`-Scraping-Route. Fix braucht
+  Rücksprache (Proxy-Kosten vs. Doku als bekannte Einschränkung vs. alternative Quelle) – Details
+  in CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

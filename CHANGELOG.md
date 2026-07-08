@@ -1,5 +1,47 @@
 # CHANGELOG
 
+## [2026-07-08] Auto-Search-Diagnose (Root Cause), Titel-Redesign, Export-Umzug
+
+**Auto-Search-Bug untersucht (nicht behoben, siehe unten):** Live auf Vercel per Klick +
+Netzwerk-/Konsolen-Prüfung reproduziert, wie angefordert Root Cause vor jedem Fix-Versuch bestätigt.
+Button/Route/Pipeline selbst fehlerfrei (Request feuert sofort, `200`, Streaming läuft, kein
+Client-Fehler) – der Redesign-Verdacht (Card-Chrome-Umbau, `TriageRow`-Event-Delegation) hat sich
+nicht bestätigt: `AutoSearchButton` liegt außerhalb von `KeyboardTriageProvider`, der `onClick` wurde
+im Redesign-Commit nicht angefasst. Tatsächliche Ursache liegt im Backend: `fetchTranscript`
+(`youtube-transcript`-Paket, inoffizielle YouTube-Scraping-Route über InnerTube-API/Watch-Page-HTML)
+scheitert auf Vercel bei **9 von 9** geprüften Kandidaten mit `no_transcript`. Dieselben 9 Video-IDs
+lokal mit demselben Paket getestet: **9 von 9 erfolgreich** (91–281 Transkript-Segmente). Gleicher
+Code, gleiche IDs, unterschiedliches Ergebnis je nach Umgebung – deutet stark auf IP-basierte
+Drosselung/Blockade durch YouTube gegen Vercels (AWS-)Serverless-IP-Ranges für diese inoffizielle
+Route hin, eine bekannte Einschränkung dieses Ansatzes auf Cloud-/Serverless-Hosts, keine Regression
+durch den Redesign-Commit. Nebenbefund: Auto-Search fragt bei jedem Lauf dieselben ersten 8 von 96
+verfügbaren Mythen-Queries ab (`buildQueries`/`discovery.ts` rotieren nicht) – der Pool an "neuen"
+(noch nicht gesehenen/geloggten) Kandidaten aus genau diesen 8 Queries schrumpft dadurch mit jedem
+Klick zusätzlich. Fix erfordert eine Architektur-/Kosten-Entscheidung (Proxy, alternative
+Transkript-Quelle, Retry-Strategie, oder bewusst als Einschränkung dokumentieren) – zurückgestellt
+bis Rücksprache, offener Punkt in TASKS.md.
+
+**Titel-Redesign** (`app/page.tsx`): Die kleine Caption "FAKTENCHECK-INBOX" plus der Satz "Lohnt es
+sich, dazu heute ein Video aufzunehmen?" ersetzt durch einen einzigen, linksbündigen `<h1>`
+"Factcheck Inbox" – Space Grotesk, `text-3xl`/`sm:text-4xl` (dieselbe Größe wie der Login-Titel,
+nichts Neues erfunden), in Deep-Teal (`text-accent`, laut PRODUCT.md bereits AA-kontrastgeprüft).
+Beide Texte nebeneinander hätten sich inhaltlich dupliziert; die kleine Eyebrow-Caption war zudem
+genau das Muster, das die Impeccable-Design-Skill als AI-Tell führt (kleine getrackte Caption über
+dem eigentlichen Titel).
+
+**Login-Seite** (`app/login/page.tsx`): "Faktencheck" → "Factcheck" (nur Text geändert, Formatierung
+unverändert), passend zum neuen Namen.
+
+**Export-Umzug** (`app/page.tsx`): "Export: CSV · Markdown" ist keine eigene Kopfzeile mehr, sondern
+steht jetzt rechts neben der Keyboard-Shortcut-Zeile ("Video hovern: …") im Filter-/Toolbar-Bereich
+statt über der ganzen Seite. Export bleibt immer sichtbar (auch im Leerzustand); die Shortcut-Zeile
+erscheint weiterhin nur, wenn es Einträge gibt. Auf Mobile (375px) umbrechen beide Zeilen sauber
+untereinander statt sich zu überlappen (per DOM-Messung + Screenshot geprüft, kein horizontales
+Overflow).
+
+Build (0 Fehler), Lint (0 Fehler, nur bereits bestehende Warnungen in `.claude/skills`) und
+Testsuite (42/42) grün.
+
 ## [2026-07-08] Impeccable-Audit: 3 weitere A11y-Fixes (Kontrast, ARIA, Formular-Labels)
 
 `/impeccable audit` als letzter Schritt vor dem Loom (document → critique → Struktur-Fix → polish
