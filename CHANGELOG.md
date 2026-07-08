@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## [2026-07-09] Glass-Design + Flow-Field-Hintergrund auf die Inbox übertragen
+
+Auf Nutzerwunsch den Login-Look auf die Inbox-Toolbar ausgeweitet: URL-Import-Feld
+(`components/inbox/url-import-form.tsx`, Eingabe + "Importieren"-Button), Filter-Trigger
+(`components/inbox/filter-bar.tsx`) und Auto-Search-Button (`components/inbox/auto-search-button.tsx`)
+im selben Glass-Stil wie Passwortfeld/"Anmelden" (`bg-white/20`/`bg-neutral-900/60` +
+`backdrop-blur-md` + Inset-Highlight). `app/page.tsx` bekommt denselben generativen
+Canvas-Hintergrund wie `/login`.
+
+**Bewusste Scope-Grenze:** Glass/Canvas nur auf die vier genannten Toolbar-Elemente – **nicht**
+auf Video-Zeilen, Annehmen/Ablehnen, Score-Zahlen oder Badges. Zwei Gründe: (1) DESIGN.md verlangt
+hier explizit kein Card-Chrome und eine unverwässerte Ampel-Logik für die zentralen Aktionen –
+Annehmen/Ablehnen brauchen unzweideutigen Kontrast. (2) Dichter Fließtext (Video-Titel, Zitate,
+Meta-Zeilen) direkt auf einem bewegten Linienbild wäre ein echtes Lesbarkeits-/WCAG-Problem für
+eine täglich genutzte Arbeitsliste, keine Stilfrage. Die Video-Liste und der Empty-State bekommen
+daher explizit `bg-background` (dieselbe Fläche wie bisher, nur lokal statt vom `<body>` geerbt –
+optisch unverändert), damit der Canvas dort nicht durchscheint.
+
+**`components/login/flow-field-background.tsx` → `components/flow-field-background.tsx`
+verschoben** (per `git mv`), da die Engine jetzt von zwei Seiten genutzt wird – ein Import aus dem
+`login`-Ordner heraus wäre irreführend gewesen. Neue optionale Prop `durationSeconds`: ohne Prop
+läuft die Animation endlos (Login, unverändert), mit Prop (`durationSeconds={10}` auf der Inbox)
+stoppt sie nach dieser Dauer dauerhaft und bleibt stehen – kein Dauerlauf hinter einer Arbeitsliste,
+die man wiederholt am Tag aufruft. Verifiziert per Canvas-Checksumme über mehrere Sekunden nach der
+10s-Marke: identisch, Animation steht wirklich still (nicht nur angenommen).
+
+**Zwei kleinere Fixes im selben Zug:**
+- Auto-Search-Button saß nicht auf gleicher Höhe wie die Filter-Buttons – Ursache war
+  `items-center` auf der umgebenden Zeile, wodurch der Button gegen den *ganzen* FilterBar-Block
+  (Label "Filtern" + Button-Reihe) statt nur gegen die Button-Reihe zentriert wurde. Auf
+  `items-end` zurückgestellt (das war vor dem Filter-Redesign schon richtig, ist beim Umbau
+  versehentlich verlorengegangen). Per `getBoundingClientRect()` verifiziert: beide Buttons jetzt
+  exakt `top:200/bottom:232/height:32`.
+- Filter-Label "Score-Bereich" → "Score" umbenannt.
+
+Live im Browser verifiziert (bereits authentifizierte Session): Canvas sichtbar im Kopf-/Randbereich,
+stoppt nach 10s (Checksumme-Vergleich), Video-Liste bleibt auf solidem Grund scharf lesbar,
+Filter-Panel öffnet/schließt weiterhin korrekt trotz neuer Basis-Klassen, Mobile (375px) ohne
+Overflow. `npm run lint`/`npm run build` sauber.
+
 ## [2026-07-09] Login-Seite: generativer Flow-Field-Hintergrund (Canvas 2D)
 
 **Nachschliff auf Feedback (Screenshot):** Die Login-Card von solidem `bg-card` auf echtes Glass

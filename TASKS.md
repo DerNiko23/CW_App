@@ -98,6 +98,14 @@
   nicht nach ~10s zu dick werden). Alle Tuning-Entscheidungen im Browser verifiziert statt nur
   angenommen (u. a. Fade-Raten und Prewarm/Live-Alpha-Split per Screenshot-Vergleich). Details
   in CHANGELOG.
+- [x] Glass-Design + Flow-Field-Hintergrund auf die Inbox übertragen (URL-Import, Filter-Trigger,
+  Auto-Search-Button im Login-Glass-Stil; Canvas jetzt auch auf `/`, aber zeitbegrenzt via neue
+  `durationSeconds`-Prop statt endlos). Bewusst nicht auf Video-Zeilen/Annehmen-Ablehnen
+  angewendet (Lesbarkeit/Ampel-Logik, siehe CHANGELOG-Begründung). Engine nach
+  `components/flow-field-background.tsx` verschoben (jetzt von Login + Inbox genutzt). Dabei
+  Auto-Search-Button-Höhe (`items-end`-Fix) und Filter-Label-Umbenennung ("Score-Bereich" →
+  "Score") mit erledigt. Live verifiziert (Panel-Funktion, 10s-Stopp per Canvas-Checksumme,
+  Mobile), Build/Lint grün. Details in CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

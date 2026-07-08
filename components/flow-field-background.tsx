@@ -139,10 +139,13 @@ type Particle = {
   color: Rgb;
 };
 
-// Animierter Tintenlinien-Hintergrund fuer die Login-Seite: seeded Flow-Field aus Noise-
-// Partikeln, komplett auf Canvas 2D berechnet (kein Bild-Asset, kein npm-Package). Laeuft
-// unabhaengig vom Formular-Status daneben (kein Props-/State-Kontakt zu LoginForm).
-export function FlowFieldBackground() {
+// Animierter Tintenlinien-Hintergrund: seeded Flow-Field aus Noise-Partikeln, komplett auf
+// Canvas 2D berechnet (kein Bild-Asset, kein npm-Package). Laeuft unabhaengig vom umgebenden
+// Formular-/Seiten-Status daneben (kein Props-/State-Kontakt zu anderen Komponenten).
+// Ohne `durationSeconds`: laeuft endlos (Login). Mit `durationSeconds`: stoppt nach dieser Dauer
+// dauerhaft und bleibt beim letzten Stand stehen, statt weiterzulaufen (Inbox - dezenter Moment
+// beim Laden, kein Dauerlauf hinter einer taeglich genutzten Arbeitsliste).
+export function FlowFieldBackground({ durationSeconds }: { durationSeconds?: number } = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -151,6 +154,8 @@ export function FlowFieldBackground() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const durationFrames =
+      durationSeconds !== undefined ? Math.round(durationSeconds * 60) : undefined;
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const inkRgb = INKS.map(hexToRgb);
@@ -232,14 +237,20 @@ export function FlowFieldBackground() {
       }
     }
 
-    // Laeuft endlos (kein Frame-Limit mehr) - jeder Frame faedet den Canvas minimal Richtung
+    // Ohne durationFrames: laeuft endlos - jeder Frame faedet den Canvas minimal Richtung
     // Papierfarbe, bevor neue Segmente gezeichnet werden. Alte Striche loesen sich langsam auf,
     // neue kommen laufend dazu: die Fläche kommt nie zur Ruhe, saettigt aber auch nie zu Schwarz.
+    // Mit durationFrames: stoppt nach dieser Frame-Zahl dauerhaft und bleibt stehen.
     function loop() {
       if (stopped) return;
       step(LIVE_INK_ALPHA, true);
       sessionFrame += 1;
-      if (sessionFrame >= LONG_SESSION_RESET_FRAMES) {
+      if (durationFrames !== undefined) {
+        if (sessionFrame >= durationFrames) {
+          stopped = true;
+          return;
+        }
+      } else if (sessionFrame >= LONG_SESSION_RESET_FRAMES) {
         setup();
         for (let i = 0; i < PREWARM_FRAMES; i++) step(PREWARM_INK_ALPHA, false);
         sessionFrame = 0;
@@ -290,7 +301,7 @@ export function FlowFieldBackground() {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("resize", handleResize);
     };
-  }, []);
+  }, [durationSeconds]);
 
   return (
     <canvas

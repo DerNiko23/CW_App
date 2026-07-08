@@ -68,9 +68,9 @@ function FilterGroup({
           <Button
             variant="outline"
             className={cn(
-              "gap-1.5",
+              "gap-1.5 border-white/40 bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-md hover:bg-white/30",
               open
-                ? "border-2 border-accent px-[9px] hover:bg-background"
+                ? "border-2 border-accent px-[9px]"
                 : isActive && "border-accent/40 text-accent",
             )}
           >
@@ -107,7 +107,7 @@ export function FilterBar() {
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="px-0.5 text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+      <span className="px-0.5 text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase [text-shadow:0_2px_20px_rgba(250,250,250,0.9)]">
         Filtern
       </span>
       <div className="flex flex-wrap items-center gap-2">
@@ -119,7 +119,7 @@ export function FilterBar() {
         />
         <FilterGroup label="Plattform" paramKey="platform" options={PLATFORM_OPTIONS} />
         <FilterGroup label="Thema" paramKey="topic" options={TOPIC_OPTIONS} />
-        <FilterGroup label="Score-Bereich" paramKey="scoreBand" options={SCORE_BAND_OPTIONS} />
+        <FilterGroup label="Score" paramKey="scoreBand" options={SCORE_BAND_OPTIONS} />
         {hasActiveFilters && (
           <button
             type="button"

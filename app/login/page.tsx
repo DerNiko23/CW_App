@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isValidSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth/session";
-import { FlowFieldBackground } from "@/components/login/flow-field-background";
+import { FlowFieldBackground } from "@/components/flow-field-background";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage() {

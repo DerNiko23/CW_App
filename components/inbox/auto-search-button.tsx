@@ -91,7 +91,12 @@ export function AutoSearchButton() {
   }
 
   return (
-    <Button variant="outline" onClick={handleClick} disabled={isSearching}>
+    <Button
+      variant="outline"
+      onClick={handleClick}
+      disabled={isSearching}
+      className="border-white/40 bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-md hover:bg-white/30"
+    >
       {isSearching ? <Loader2 className="animate-spin" /> : <Search />}
       {isSearching ? `Suche läuft … ${foundCount}/${TARGET_FOUND} gefunden` : "Auto-Search"}
     </Button>
