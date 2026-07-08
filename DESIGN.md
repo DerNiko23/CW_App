@@ -64,7 +64,7 @@ components:
   button-primary:
     backgroundColor: "{colors.fast-schwarz}"
     textColor: "{colors.off-white}"
-    rounded: "{rounded.lg}"
+    rounded: "{rounded.full}"
     padding: "0 0.625rem"
     height: "2rem"
   button-primary-hover:
@@ -72,17 +72,17 @@ components:
   button-accept:
     backgroundColor: "{colors.signal-gruen}"
     textColor: "#FFFFFF"
-    rounded: "{rounded.lg}"
+    rounded: "{rounded.full}"
     height: "2rem"
   button-outline:
     backgroundColor: "{colors.off-white}"
     textColor: "{colors.fast-schwarz}"
-    rounded: "{rounded.lg}"
+    rounded: "{rounded.full}"
     height: "2rem"
   button-destructive-tonal:
     backgroundColor: "rgba(193,67,46,0.1)"
     textColor: "{colors.signal-rost}"
-    rounded: "{rounded.lg}"
+    rounded: "{rounded.full}"
     height: "2rem"
   status-pill:
     rounded: "{rounded.full}"
@@ -124,7 +124,10 @@ dem man morgens ungeprüft vertraut.
 **Key Characteristics:**
 - Neutrale Fläche (Off-White/Fast-Schwarz), ein einziger Marken-Akzent (Deep Teal), strikt getrennt
   von der Ampel-Statuslogik (Grün/Amber/Rot).
-- Scharfe statt runde Kanten (2–6px), Hairline-Trenner statt Card-Nesting auf der Detailseite.
+- Scharfe statt runde Kanten (2–6px) für Struktur/Inhalt (Cards, Inputs, Panels, Dividers),
+  Hairline-Trenner statt Card-Nesting auf der Detailseite. **Aktionsflächen (Buttons/CTAs)** sind
+  seit dem Button-Redesign (siehe CHANGELOG 2026-07-09) die eine bewusste Ausnahme davon –
+  Details unter "Rund vs. scharf" in Abschnitt 5.
 - Ein visuelles Signature-Element: die nackte Score-Zahl in Space Grotesk – kein Chip, keine Hülle.
 - Ruhig und selbstsicher: keine Dringlichkeits-Chrome außer der Ampel-Logik selbst; das UI konkurriert
   nie mit den Daten.
@@ -209,6 +212,11 @@ durch Tiefe. Schatten sind reserviert für Overlay-Ebenen, die tatsächlich übe
 - **Overlay** (`box-shadow: var(--shadow-md); ring: 1px solid oklch(foreground/10%)`): Popover- und
   Select-Dropdowns. Die einzige Stelle im System mit echtem Schatten – funktional (schwebt über
   Inhalt), nicht dekorativ.
+- **Filter-Dropdown-Panel** (seit 2026-07-09, `components/inbox/filter-bar.tsx`): teilt sich die
+  Overlay-Schatten-Regel mit Popover/Select, bekommt aber `rounded-[12px]` statt der sonst
+  scharfen 2–6px – zweite bewusste Radius-Ausnahme (nach Status-Pills), begründet durch den
+  Referenz-Screenshot des Nutzers. Gilt nur für dieses eine Panel, nicht als generelle
+  Overlay-Regel.
 
 ### Named Rules
 **Die Flach-außer-Overlay-Regel.** Wenn es nicht über dem Inhalt schwebt, hat es keinen Schatten.
@@ -222,7 +230,9 @@ Hover- und Fokus-Zustände sind spürbar, aber unaufgeregt (Farbverschiebung, ke
 außer bei Thumbnails).
 
 ### Buttons
-- **Shape:** `rounded-lg` (2,4px) – scharf, aber nicht komplett eckig.
+- **Shape:** `rounded-full` (seit Redesign 2026-07-09, vorher `rounded-lg`/2,4px). Siehe
+  "Rund vs. scharf" unten für die Begründung – gilt für alle Buttons ausnahmslos (Primary,
+  Accept, Outline/Ghost, Destructive, in jeder Größe inkl. `xs`/`sm`/Icon-Buttons).
 - **Primary:** Fast-Schwarz-Fläche, Off-White-Text (`hover:` 80 % Deckkraft). Bewusst kein
   Teal-Standard-Button – der Akzent bleibt selten.
 - **Accept-Variante:** einzige Ausnahme von "Primary ist schwarz" – der Annehmen-Button auf
@@ -232,12 +242,24 @@ außer bei Thumbnails).
   zurückhaltenden Farbnutzung.
 - **Zustand:** Aktive Buttons verschieben sich 1px nach unten (`active:translate-y-px`) – ein
   spürbarer, aber winziger "Tastendruck"; keine Skalierung, kein Schatten-Pop.
+- **Aktiver Filter-Trigger (FilterBar):** `border-2 border-accent` statt der Standard-Hairline,
+  Chevron rotiert 180°. Nutzt die bereits bestehende Regel "Deep Teal = aktive Filter" (Abschnitt
+  2) statt einer neuen Farbe.
 
-### Status-Pills (Tag-Semantik, bewusste Ausnahme von der scharfen Radius-Regel)
+### Rund vs. scharf (Named Rule, seit 2026-07-09)
+Das System hatte bis 2026-07-08 durchgängig scharfe Radien inkl. Buttons. Auf Nutzerwunsch
+(Referenz-Screenshot eines Filter-UIs) wurde das für **Aktionsflächen** bewusst aufgebrochen:
+**rund = Aktion, scharf = Struktur/Inhalt.** Buttons/CTAs (alles, was man klickt, um etwas
+auszulösen) sind `rounded-full`. Cards, Inputs, Panels und Dividers bleiben scharf (2–6px) – die
+Unterscheidung ist jetzt semantisch (klickbare Aktion vs. Inhalt/Struktur) statt rein ästhetisch,
+und bewusst nicht die pauschale Rückkehr zur unter "Design-Richtung B" verworfenen weichen
+Formsprache (die betraf Cards/Zitate/Hintergründe, nicht Buttons).
+
+### Status-Pills (Tag-Semantik)
 - **Style:** `rounded-full`, tonale Hintergrundfarbe je Status (Neu = Secondary, Angenommen =
   Teal/15 %, Erledigt = Grün/15 %, Abgelehnt = Rost/10 %).
-- **Regel:** Pills bleiben rund, obwohl der Rest des Systems scharfe Radien nutzt – Tag/Chip-Form
-  ist eine eigene Formsprache, kein Regressions-Fehler.
+- **Regel:** Pills waren schon vor dem Button-Redesign rund (eigene Tag/Chip-Formsprache) und
+  sind seit 2026-07-09 kein Sonderfall mehr, sondern teilen die Form mit Buttons.
 
 ### Score-Badge (Signature-Komponente)
 - **Liste und Detailseite teilen sich dieselbe nackte-Zahl-Sprache** – kein Chip, keine Hülle,
@@ -264,6 +286,9 @@ außer bei Thumbnails).
 - **Style:** Hairline-Border, Karten-Weiß-Hintergrund, `rounded-lg`, `h-8`–`h-10` je nach Kontext.
 - **Focus:** `focus-visible:border-ring` + 3px Ring in Teal/50 % – der Akzent taucht hier bewusst
   wieder auf (Fokus ist ein Marken-Moment, kein Statusmoment).
+- **Checkbox** (`components/ui/checkbox.tsx`, seit 2026-07-09, FilterBar-Panels): bleibt bei
+  `rounded-sm` – Formular-Kontrolle, keine Aktionsfläche, folgt also der scharfen Struktur-Regel,
+  nicht der Button-Regel. Checked-State in Deep Teal (Ein-Akzent-Regel).
 
 ### Zitate (Blockquote)
 - **Style:** `border-l-[2–3px] border-accent`, stilisierte „Anführungszeichen in Space Grotesk statt
@@ -284,15 +309,20 @@ außer bei Thumbnails).
 - **Do** neue Animationen unter der globalen `prefers-reduced-motion`-Regel in `globals.css`
   belassen (seit Polish 2026-07-08: kollabiert Dauer statt Sichtbarkeit zu togglen) – keine
   Einzelfall-Ausnahmen einführen, die diese Regel umgehen.
+- **Do** neue Buttons/CTAs `rounded-full` setzen (der `Button`-Basiskomponente folgen, nicht
+  manuell überschreiben) – siehe "Rund vs. scharf". Cards/Inputs/Panels bleiben scharf.
 
 ### Don't:
-- **Don't** zur warmen Creme-/Amber-Palette, `rounded-3xl`-Rundungen überall, kursiven Serif-Zitaten
-  oder Radial-Gradient-Blobs zurückkehren (Design-Richtung B, explizit verworfen – "der bekannteste
-  KI-Generierungs-Default").
+- **Don't** zur warmen Creme-/Amber-Palette, kursiven Serif-Zitaten oder Radial-Gradient-Blobs
+  zurückkehren (Design-Richtung B, explizit verworfen – "der bekannteste KI-Generierungs-Default").
+  Das betrifft weiterhin nicht die Button-Form – `rounded-full` bei Aktionsflächen ist eine
+  bewusste, separate Entscheidung (siehe "Rund vs. scharf"), keine Rückkehr zu Design-Richtung B.
 - **Don't** Deep Teal für Status-Bedeutung verwenden (das war der Bug vor dem Redesign: Mid-Tier
   nutzte fälschlich die Akzentfarbe statt Amber).
 - **Don't** Schatten auf Cards, Buttons oder Sections einsetzen – Schatten sind ausschließlich für
-  Overlays (Popover/Select) reserviert.
+  Overlays (Popover/Select/Filter-Dropdown-Panel) reserviert.
+- **Don't** scharfe Radien bei Cards/Inputs/Panels auf `rounded-full` umstellen, nur weil Buttons
+  jetzt rund sind – die Rund-Regel gilt ausschließlich für Aktionsflächen.
 - **Don't** neue Fähigkeiten visuell suggerieren, die die Pipeline nicht wirklich prüft (z. B. eine
   "Ironie erkannt"-Badge) – die Confidence-Checkliste zeigt nur echte Checks, und das Design darf das
   nie unterlaufen.

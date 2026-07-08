@@ -25,16 +25,20 @@ function RowSkeleton() {
 export default function InboxLoading() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 sm:py-12">
-      <header className="flex flex-col gap-1">
-        <div className="h-3 w-32 animate-pulse rounded bg-muted" />
-        <div className="h-8 w-3/4 animate-pulse rounded bg-muted" />
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="h-9 w-56 animate-pulse rounded bg-muted" />
+        <div className="h-4 w-32 animate-pulse rounded bg-muted" />
       </header>
 
       <div className="h-11 w-full animate-pulse rounded-2xl bg-muted/70" />
-      <div className="flex gap-2">
-        <div className="h-9 w-28 animate-pulse rounded-lg bg-muted/70" />
-        <div className="h-9 w-28 animate-pulse rounded-lg bg-muted/70" />
-        <div className="h-9 w-28 animate-pulse rounded-lg bg-muted/70" />
+      <div className="flex flex-col gap-2">
+        <div className="h-3 w-16 animate-pulse rounded bg-muted" />
+        <div className="flex gap-2">
+          <div className="h-9 w-24 animate-pulse rounded-full bg-muted/70" />
+          <div className="h-9 w-28 animate-pulse rounded-full bg-muted/70" />
+          <div className="h-9 w-20 animate-pulse rounded-full bg-muted/70" />
+          <div className="h-9 w-32 animate-pulse rounded-full bg-muted/70" />
+        </div>
       </div>
 
       <div className="flex flex-col divide-y divide-border">

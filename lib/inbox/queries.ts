@@ -231,14 +231,10 @@ export async function getInboxItems(filters: InboxFilters = {}): Promise<InboxIt
   const supabase = createAdminClient();
 
   let query = supabase.from("videos").select("*");
-  const status = filters.status ?? "new";
-  if (Array.isArray(status)) {
-    query = query.in("status", status);
-  } else if (status !== "all") {
-    query = query.eq("status", status);
-  }
-  if (filters.platform && filters.platform !== "all") {
-    query = query.eq("platform", filters.platform);
+  const status = filters.status && filters.status.length > 0 ? filters.status : ["new"];
+  query = query.in("status", status);
+  if (filters.platform && filters.platform.length > 0) {
+    query = query.in("platform", filters.platform);
   }
 
   const { data: videos, error } = await query.order("created_at", { ascending: false });
@@ -248,16 +244,20 @@ export async function getInboxItems(filters: InboxFilters = {}): Promise<InboxIt
 
   // CLAUDE.md / ROADMAP.md: Confidence < 70 % kommt NICHT in die Inbox (teuerster Fehler
   // waeren False Positives). Gilt nur fuer die "Neu"-Warteschlange, nicht fuer bereits
-  // getroffene Entscheidungen (Angenommen/Erledigt/Abgelehnt/Alle) - die bleiben sichtbar.
-  if (status === "new") {
-    items = items.filter((item) => passesConfidenceThreshold(item.claim.confidence));
-  }
+  // getroffene Entscheidungen (Angenommen/Erledigt/Abgelehnt) - die bleiben sichtbar. Pro Item
+  // statt am Filter-Parameter geprueft, damit das bei gleichzeitig ausgewaehlten Status
+  // (z. B. "Neu" + "Angenommen") weiterhin nur fuer echte "Neu"-Items greift.
+  items = items.filter(
+    (item) => item.video.status !== "new" || passesConfidenceThreshold(item.claim.confidence),
+  );
 
-  if (filters.topic && filters.topic !== "all") {
-    items = items.filter((item) => item.claim.topic === filters.topic);
+  if (filters.topic && filters.topic.length > 0) {
+    items = items.filter((item) => filters.topic!.includes(item.claim.topic));
   }
-  if (filters.scoreBand && filters.scoreBand !== "all") {
-    items = items.filter((item) => scoreBandMatches(filters.scoreBand as string, item.score.total));
+  if (filters.scoreBand && filters.scoreBand.length > 0) {
+    items = items.filter((item) =>
+      filters.scoreBand!.some((band) => scoreBandMatches(band, item.score.total)),
+    );
   }
 
   items.sort((a, b) => b.score.total - a.score.total);

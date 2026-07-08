@@ -1,14 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { X } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ChevronDown, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { parseListParam, serializeListParam } from "@/lib/inbox/filter-params";
 import {
   PLATFORM_OPTIONS,
   TOPIC_OPTIONS,
@@ -18,56 +17,85 @@ import {
 
 type Option = { value: string; label: string };
 
-function FilterSelect({
+function FilterGroup({
   label,
   paramKey,
   options,
-  allLabel,
-  defaultValue = "all",
+  defaultValue = [],
 }: {
   label: string;
   paramKey: string;
   options: readonly Option[];
-  allLabel: string;
-  defaultValue?: string;
+  defaultValue?: string[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const value = searchParams.get(paramKey) ?? defaultValue;
-  const items = [{ value: "all", label: allLabel }, ...options];
+  const [open, setOpen] = useState(false);
 
-  function handleChange(next: string | null) {
-    if (next === null) return;
+  const applied = parseListParam(searchParams.get(paramKey) ?? undefined, defaultValue);
+  const [pending, setPending] = useState(applied);
+  const isActive = applied.length > 0 && applied.join(",") !== defaultValue.join(",");
+
+  function handleOpenChange(next: boolean) {
+    // Beim Oeffnen immer auf den zuletzt tatsaechlich angewendeten Stand zuruecksetzen - sonst
+    // zeigt ein ohne "Anwenden" geschlossenes Panel beim naechsten Oeffnen einen veralteten,
+    // nie uebernommenen Zwischenstand.
+    if (next) setPending(applied);
+    setOpen(next);
+  }
+
+  function toggle(value: string) {
+    setPending((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+  }
+
+  function handleApply() {
     const params = new URLSearchParams(searchParams.toString());
-    if (next === defaultValue) {
-      params.delete(paramKey);
+    const serialized = serializeListParam(pending);
+    if (serialized) {
+      params.set(paramKey, serialized);
     } else {
-      params.set(paramKey, next);
+      params.delete(paramKey);
     }
     router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname);
+    setOpen(false);
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <span className="px-0.5 text-[11px] font-medium text-muted-foreground">{label}</span>
-      {/* `items` gibt Select.Value die Label-Zuordnung unabhaengig vom Mount-Status
-          der Popup-Liste - ohne das faellt die Anzeige nach dem Schliessen auf den
-          rohen `value` zurueck (Base UI Select-Verhalten). */}
-      <Select items={items} value={value} onValueChange={handleChange}>
-        <SelectTrigger className="bg-card">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{allLabel}</SelectItem>
-          {options.map((o) => (
-            <SelectItem key={o.value} value={o.value}>
-              {o.label}
-            </SelectItem>
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger
+        render={
+          <Button
+            variant="outline"
+            className={cn(
+              "gap-1.5",
+              open
+                ? "border-2 border-accent px-[9px] hover:bg-background"
+                : isActive && "border-accent/40 text-accent",
+            )}
+          >
+            {label}
+            <ChevronDown className={cn("size-3.5 transition-transform", open && "rotate-180")} />
+          </Button>
+        }
+      />
+      <PopoverContent align="start" className="w-auto min-w-72 rounded-[12px] p-4">
+        <div className="grid grid-cols-2 gap-x-5 gap-y-3">
+          {options.map((option) => (
+            <label key={option.value} className="flex cursor-pointer items-center gap-2 text-sm">
+              <Checkbox
+                checked={pending.includes(option.value)}
+                onCheckedChange={() => toggle(option.value)}
+              />
+              {option.label}
+            </label>
           ))}
-        </SelectContent>
-      </Select>
-    </div>
+        </div>
+        <Button onClick={handleApply} className="mt-4 w-fit">
+          Anwenden
+        </Button>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -78,37 +106,31 @@ export function FilterBar() {
   const hasActiveFilters = searchParams.toString().length > 0;
 
   return (
-    <div className="flex flex-wrap items-end gap-2">
-      <FilterSelect
-        label="Status"
-        paramKey="status"
-        options={STATUS_OPTIONS.filter((s) => s.value !== "all")}
-        allLabel="Alle Status"
-        defaultValue="new"
-      />
-      <FilterSelect
-        label="Plattform"
-        paramKey="platform"
-        options={PLATFORM_OPTIONS}
-        allLabel="Alle Plattformen"
-      />
-      <FilterSelect label="Thema" paramKey="topic" options={TOPIC_OPTIONS} allLabel="Alle Themen" />
-      <FilterSelect
-        label="Score-Bereich"
-        paramKey="scoreBand"
-        options={SCORE_BAND_OPTIONS}
-        allLabel="Alle Scores"
-      />
-      {hasActiveFilters && (
-        <button
-          type="button"
-          onClick={() => router.push(pathname)}
-          className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <X className="size-3.5" />
-          Zurücksetzen
-        </button>
-      )}
+    <div className="flex flex-col gap-2">
+      <span className="px-0.5 text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+        Filtern
+      </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <FilterGroup
+          label="Status"
+          paramKey="status"
+          options={STATUS_OPTIONS.filter((s) => s.value !== "all")}
+          defaultValue={["new"]}
+        />
+        <FilterGroup label="Plattform" paramKey="platform" options={PLATFORM_OPTIONS} />
+        <FilterGroup label="Thema" paramKey="topic" options={TOPIC_OPTIONS} />
+        <FilterGroup label="Score-Bereich" paramKey="scoreBand" options={SCORE_BAND_OPTIONS} />
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={() => router.push(pathname)}
+            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <X className="size-3.5" />
+            Zurücksetzen
+          </button>
+        )}
+      </div>
     </div>
   );
 }

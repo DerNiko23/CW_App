@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Inbox } from "lucide-react";
 import { getInboxItems } from "@/lib/inbox/queries";
+import { parseListParam } from "@/lib/inbox/filter-params";
 import { VideoCard } from "@/components/inbox/video-card";
 import { FilterBar } from "@/components/inbox/filter-bar";
 import { UrlImportForm } from "@/components/inbox/url-import-form";
@@ -23,42 +24,27 @@ export default async function InboxPage({
 }) {
   const resolvedSearchParams = await searchParams;
   const items = await getInboxItems({
-    status: first(resolvedSearchParams.status),
-    platform: first(resolvedSearchParams.platform),
-    topic: first(resolvedSearchParams.topic),
-    scoreBand: first(resolvedSearchParams.scoreBand),
+    status: parseListParam(first(resolvedSearchParams.status), ["new"]),
+    platform: parseListParam(first(resolvedSearchParams.platform)),
+    topic: parseListParam(first(resolvedSearchParams.topic)),
+    scoreBand: parseListParam(first(resolvedSearchParams.scoreBand)),
   });
   const hasActiveFilters = Object.keys(resolvedSearchParams).length > 0;
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 sm:py-12">
-      <header>
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-heading text-3xl font-semibold text-accent sm:text-4xl">
           Factcheck Inbox
         </h1>
+        <ExportLinks />
       </header>
 
       <UrlImportForm />
 
-      <div className="flex flex-wrap items-end justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <FilterBar />
         <AutoSearchButton />
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">
-          {items.length > 0 && (
-            <>
-              Video hovern: <kbd className="rounded border border-border px-1 py-0.5 font-mono">a</kbd>{" "}
-              annehmen ·{" "}
-              <kbd className="rounded border border-border px-1 py-0.5 font-mono">1</kbd>–
-              <kbd className="rounded border border-border px-1 py-0.5 font-mono">4</kbd> ablehnen mit
-              Grund · <kbd className="rounded border border-border px-1 py-0.5 font-mono">d</kbd>{" "}
-              erledigt
-            </>
-          )}
-        </p>
-        <ExportLinks />
       </div>
 
       {items.length === 0 ? (

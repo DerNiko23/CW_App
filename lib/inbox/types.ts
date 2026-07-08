@@ -50,8 +50,8 @@ export type InboxItem = {
 };
 
 export type InboxFilters = {
-  platform?: string;
-  topic?: string;
-  scoreBand?: string;
-  status?: string | string[];
+  platform?: string[];
+  topic?: string[];
+  scoreBand?: string[];
+  status?: string[];
 };

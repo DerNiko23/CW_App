@@ -55,12 +55,15 @@ Beide Seiten sind reine Server Components, die `lib/inbox/queries.ts` aufrufen �
 Videos/Claims/Myths/Snapshots/Weights und berechnet Score/Novelty pro Video mit denselben
 `lib/pipeline`-Funktionen, die auch die Pipeline nutzt (kein doppelter Score-Code).
 
-- **Filter** (Status/Plattform/Thema/Score-Bereich) sind URL-Query-Params
-  (`components/inbox/filter-bar.tsx`), damit die Inbox serverseitig gerendert und dennoch
+- **Filter** (Status/Plattform/Thema/Score-Bereich) sind Multi-Select-Checkboxen in einer
+  Button+Panel-UI (`components/inbox/filter-bar.tsx`, Redesign 2026-07-09) und werden als
+  kommagetrennte URL-Query-Params kodiert (`lib/inbox/filter-params.ts`, z. B.
+  `?status=new,accepted`), damit die Inbox serverseitig gerendert und dennoch
   linkbar/bookmarkbar bleibt.
 - **Confidence < 70 %** wird aus der Standard-"Neu"-Warteschlange gefiltert (CLAUDE.md, ROADMAP.md-Risiko
-  "False Positives sind der teuerste Fehler"), bleibt aber über den Status-Filter "Alle"
-  einsehbar – nicht komplett versteckt, nur nicht in der aktiven Queue.
+  "False Positives sind der teuerste Fehler"), bleibt aber sichtbar, sobald der Status-Filter
+  einen anderen Status als nur "Neu" einschließt (z. B. "Angenommen" mit auswählen) – nicht
+  komplett versteckt, nur nicht in der aktiven "Neu"-Queue.
 - **Accept/Reject/Erledigt** sind Server Actions (`app/actions.ts`), aufgerufen aus
   `components/inbox/action-buttons.tsx` (Maus) oder `components/inbox/keyboard-triage.tsx`
   (Tastatur: Zeile hovern, `a`/`1`-`4`/`d` – Power-User-Shortcut für die tägliche Triage, siehe

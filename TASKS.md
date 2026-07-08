@@ -86,6 +86,11 @@
   "Erledigt") und 5 heutige Test-Klick-Artefakte korrigiert. Sichtbar jetzt 18 Videos (10 Neu +
   6 Angenommen + 2 Erledigt), durchgängig 100% Confidence mit echtem Zitat+Timestamp+Quelle.
   Details in CHANGELOG.
+- [x] Button-Redesign (`rounded-full` global, auf Nutzerwunsch mit Referenz-Screenshot) +
+  FilterBar komplett neu (Button-Reihe + inline Checkbox-Panel statt Selects, dabei auf
+  Multi-Select umgestellt) + Header aufgeräumt (Hotkey-Zeile entfernt, Export neben Titel).
+  Live + Mobile (375px) geprüft, Build/Lint grün. DESIGN.md-Bruch bewusst dokumentiert statt
+  stillschweigend übergangen. Details in CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

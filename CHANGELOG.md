@@ -1,5 +1,68 @@
 # CHANGELOG
 
+## [2026-07-09] Button-Redesign (rounded-full), FilterBar-Neubau (Multi-Select), Header-Aufräumung
+
+**Auf Nutzerwunsch mit Referenz-Screenshot, kein selbst initiiertes Redesign.** Drei zusammenhängende
+UI-Änderungen in einer Session:
+
+**1) Globaler Button-Radius `rounded-lg` → `rounded-full`.** Betrifft `components/ui/button.tsx`
+(Basis + alle Size-Varianten, dabei zwei nie genutzte `in-data-[slot=button-group]`-Radius-Hooks
+entfernt – es gibt keine ButtonGroup-Komponente im Projekt) sowie drei hartcodierte Buttons
+außerhalb der Basiskomponente (`app/error.tsx`, `app/videos/[id]/not-found.tsx`,
+Lade-Skeletons in `app/loading.tsx`, dessen Header-Skeleton nebenbei auf die aktuelle
+Kopfzeilen-Struktur korrigiert wurde – er bildete noch die vor Commit `5cc33e0` entfernte
+Eyebrow+Frage-Kopfzeile ab). Cards, Inputs, Badges, Status-Pills bewusst nicht angefasst (Badges/
+Pills waren schon `rounded-full`, keine Änderung nötig).
+
+**Bewusster Bruch mit der bisherigen "scharfe Kanten überall"-Regel, dokumentiert statt
+stillschweigend übergangen:** DESIGN.md verlangte bisher scharfe Radien explizit auch für Buttons.
+Neue Named Rule "Rund vs. scharf": **rund = Aktionsfläche (Button/CTA), scharf = Struktur/Inhalt**
+(Cards, Inputs, Panels, Dividers bleiben unverändert scharf). Das ist keine Rückkehr zur
+verworfenen "Design-Richtung B" (die betraf Creme-Palette/Serif-Zitate/Gradient-Blobs, nicht
+Button-Form) – DESIGN.md Abschnitt 5 entsprechend nachgezogen, inkl. Token-Referenzen im
+Frontmatter (`button-primary`/`button-accept`/`button-outline`/`button-destructive-tonal` auf
+`{rounded.full}`).
+
+**2) FilterBar (`components/inbox/filter-bar.tsx`) komplett neu gebaut** – Button-Reihe
+(Label + Chevron) statt Select-Dropdowns, Klick öffnet ein inline `Popover`-Panel (kein Modal)
+mit 2-spaltigem Checkbox-Grid und einem "Anwenden"-Button. Offener Trigger: `border-2
+border-accent` (Deep Teal, nutzt die in DESIGN.md schon bestehende "aktive Filter"-Zuordnung
+statt einer neu erfundenen Farbe); Panel: `rounded-[12px]` als zweite bewusste Radius-Ausnahme
+neben Status-Pills (dokumentiert in DESIGN.md, Abschnitt Elevation).
+
+Dafür Filter von Single- auf Multi-Select umgestellt (Checkboxen brauchen das, um kein
+UX-Etikettenschwindel zu sein): `InboxFilters` (`lib/inbox/types.ts`) auf reine `string[]`
+vereinheitlicht, `getInboxItems` (`lib/inbox/queries.ts`) filtert Plattform/Thema/Score-Bereich
+jetzt über Arrays (`.in()`/`.includes()`/`.some()`), Status-Array wird jetzt auch von der
+Inbox-Seite selbst genutzt (bisher nur von `app/api/export/route.ts`). Die Confidence<70%-Schwelle
+(MASTERPLAN, teuerster Fehler wären False Positives) hing bisher am einzelnen `status`-Parameter –
+das funktioniert mit Mehrfachauswahl nicht mehr, jetzt pro Item geprüft
+(`item.video.status !== "new" || passesConfidenceThreshold(...)`), damit sie bei z. B.
+gleichzeitig "Neu" + "Angenommen" weiterhin nur echte "Neu"-Items filtert. Neue geteilte
+URL-Param-Helfer `lib/inbox/filter-params.ts` (kommagetrennter Query-Param, z. B.
+`?status=new,accepted`).
+
+Neue Datei `components/ui/checkbox.tsx` (Wrapper um `@base-ui/react/checkbox`, analog zu
+`select.tsx`/`popover.tsx`) – bleibt bei `rounded-sm` (Formular-Kontrolle, keine Aktionsfläche).
+
+**Bewusster Scope-Cut:** Der Referenz-Screenshot zeigte 6 Filter-Spalten (u. a. "Confidence",
+"Sortieren") an einem Shop-Beispiel. Übernommen wurde nur das UI-Pattern für die 4 real
+existierenden Filter (Status/Plattform/Thema/Score-Bereich) – keine neue Confidence- oder
+Sortierfunktion erfunden, die es vorher nicht gab (CLAUDE.md: keine neuen Features ohne
+Rücksprache).
+
+**3) Header aufgeräumt:** Hotkey-Hinweiszeile (`Video hovern: a annehmen · 1–4 …`) entfernt, die
+eigentliche Tastatur-Triage (`components/inbox/keyboard-triage.tsx`, `a`/`1`-`4`/`d`) bleibt aktiv
+– nur der sichtbare Text verschwindet. `ExportLinks` von der (jetzt gelöschten) Hotkey-Zeile
+zurück neben den Titel verschoben (`app/page.tsx`-Header jetzt `justify-between`), wie vor Commit
+`5cc33e0`, nur mit dem seit diesem Commit kürzeren "Factcheck Inbox"-Titel statt der alten
+Eyebrow+Frage-Kopfzeile.
+
+**Verifiziert:** `npm run lint`/`npm run build` sauber, live im Dev-Server getestet (Panel öffnen/
+schließen, Mehrfachauswahl über URL-Params bestätigt via `?scoreBand=40-59` → korrekt gefilterte
+Treffer, Reset-Link, Mobile-Viewport 375px ohne Overflow, `rounded-full` an Annehmen/Ablehnen/
+Auto-Search/Anwenden-Buttons per `getComputedStyle` verifiziert statt nur optisch angenommen).
+
 ## [2026-07-08] URL-Import ebenfalls betroffen, ehrliche Fehlermeldungen, DB-Bereinigung
 
 **URL-Import ist kein sicherer Fallback – rigoros bestätigt.** Auf Nutzeranfrage vor jeder

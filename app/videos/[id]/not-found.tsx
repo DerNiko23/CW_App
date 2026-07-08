@@ -15,7 +15,7 @@ export default function VideoNotFound() {
       </div>
       <Link
         href="/"
-        className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
+        className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
       >
         <ArrowLeft className="size-4" />
         Zurück zur Inbox
