@@ -1,5 +1,44 @@
 # CHANGELOG
 
+## [2026-07-09] Flow-Field: 3 Bugfixes (Fade-in, Mobile-Scroll-Reload, iOS-Zoom)
+
+Drei konkrete, vom Nutzer live auf dem Handy gefundene Bugs behoben.
+
+**1) Kein Fade-in beim Laden.** `components/flow-field-background.tsx` zeichnete den Erststand
+bisher über einen *synchronen* Prewarm-Burst (500 Iterationen in einer `for`-Schleife, alle vor
+dem ersten Paint) – der Nutzer sah dadurch sofort das fertige, dichte Bild statt eines Aufbaus.
+Umgebaut auf ein Phasen-Modell: `phase: "building" | "live"`. Die Aufbau-Phase zeichnet jetzt
+über *echte, gemalte* `requestAnimationFrame`-Frames (dieselbe Alpha wie der alte Prewarm, aber
+sichtbar über ~8s statt synchron vorberechnet) – der Nutzer sieht die Linien entstehen. Endlos-
+Modus (Login) wechselt danach in die schon verifizierte Live/Fade-Phase; zeitbegrenzter Modus
+(Inbox) stoppt nach der Aufbauphase selbst (keine separate Live-Phase nötig, `durationSeconds=10`
+deckt sich in der Praxis fast mit der alten Prewarm-Dauer). Long-Session-Reset (alle 90.000
+Frames) baut jetzt ebenfalls sanft neu auf statt abrupt zu "poppen". `prefers-reduced-motion`
+unverändert: synchroner Aufbau, sofort eingefroren (kein Animations-Loop erlaubt).
+Live verifiziert per Live-`requestAnimationFrame`-Loop: Helligkeit direkt nach Start ≈ 250 (fast
+reines Papierweiß, nicht mehr sofort dicht) und sinkt danach graduell mit der Frame-Zahl statt in
+einem Sprung.
+
+**2) Ungewollter "Reload" beim Scrollen auf dem Handy.** Mobile Browser feuern beim Scrollen
+`resize`-Events, wenn die Adressleiste ein-/ausblendet (ändert nur `innerHeight` um ~50–100px,
+nie `innerWidth`) – der bisherige `handleResize` hat das als echten Resize behandelt und Feld +
+Partikel komplett neu aufgebaut. `handleResize` prüft jetzt: nur neu aufbauen bei echter
+Breitenänderung **oder** Höhenänderung > 150px (deckt Rotation/echte Fenster-Resizes ab, ignoriert
+Adressleisten-Jitter). Per 6 simulierten Szenarien verifiziert (Toolbar-Ein-/Ausblenden bei
+gleicher Breite → kein Rebuild; echte Rotation/Breitenänderung/große Höhenänderung → Rebuild wie
+gewohnt).
+
+**3) iOS-Zoom beim Fokussieren von Textfeldern.** iOS Safari zoomt automatisch rein, wenn ein
+fokussiertes Input eine effektive Schriftgröße < 16px hat – Passwortfeld (`app/login/
+login-form.tsx`) und YouTube-URL-Feld (`components/inbox/url-import-form.tsx`) nutzten beide
+`text-sm` (14px). Auf `text-base` (16px, per `getComputedStyle` im Projekt bestätigt) angehoben –
+beide Inputs im selben Zug, da identischer Bug mit identischer Ursache; ein Fix ohne den anderen
+hätte ein inkonsistentes Verhalten zwischen den beiden einzigen Text-Inputs der App hinterlassen.
+Keine Viewport-Meta-Änderung (`user-scalable=no` o. ä.) – das würde Pinch-Zoom app-weit abschalten,
+schlechte Praxis und nicht angefragt; die 16px-Regel ist der zielgerichtete Standard-Fix.
+
+`npm run lint`/`npm run build` sauber.
+
 ## [2026-07-09] Video-Karten + Action-Buttons ins Glass-Design übertragen
 
 Auf explizitem Nutzerwunsch (nach Ansicht der Toolbar im Glass-Stil) die vorherige Scope-Grenze

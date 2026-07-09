@@ -112,6 +112,12 @@
   bekommt rote Schrift statt roter Box (inkl. Fix für den bekannten `aria-expanded`-Cascade-Bug),
   Als-erledigt-markieren im dunklen Glas-Stil. Live verifiziert (Kontrast, alle drei
   Button-Zustände, 320px/375px), Build/Lint grün. Details in CHANGELOG.
+- [x] Flow-Field: 3 vom Nutzer live auf dem Handy gefundene Bugs behoben – kein Fade-in beim Laden
+  (synchroner Prewarm → sichtbares Aufbau-Phasen-Modell), ungewollter Reload beim mobilen Scrollen
+  (resize-Handler ignoriert jetzt Adressleisten-Höhen-Jitter, reagiert nur auf echte Breiten-/
+  große Höhenänderung), iOS-Zoom beim Fokussieren von Passwort-/URL-Feld (`text-sm` → `text-base`,
+  16px-Schwelle). Alle drei live/per Logiktest verifiziert statt nur angenommen, Build/Lint grün.
+  Details in CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

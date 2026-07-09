@@ -22,7 +22,7 @@ export function LoginForm() {
         autoFocus
         required
         disabled={isPending}
-        className="h-11 w-full rounded-full border border-white/40 bg-white/20 px-4 text-center text-sm text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-md outline-none placeholder:text-foreground/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="h-11 w-full rounded-full border border-white/40 bg-white/20 px-4 text-center text-base text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-md outline-none placeholder:text-foreground/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
       />
       <Button
         type="submit"

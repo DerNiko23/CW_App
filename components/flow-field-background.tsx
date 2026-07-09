@@ -12,9 +12,10 @@ const ACCENT_RATIO = 0.075;
 const SCALE = 0.0028;
 const CURL = 1.6;
 const STEP = 1.7;
-// Erststart: viele Frames ohne Fade sofort synchron zeichnen, damit das Bild beim Laden
-// sofort dicht wirkt statt erst ueber Sekunden aufzubauen. Laeuft danach (ausser bei
-// reduced-motion) endlos mit FADE_ALPHA weiter - "immer in Bewegung" statt einmal "gesetzt".
+// Erststart: Aufbau-Phase ueber echte, animierte Frames (kein Fade) - der Nutzer sieht die
+// Linien sichtbar entstehen statt sie fertig vorzufinden. Laeuft danach (ausser bei
+// reduced-motion, wo alles sofort synchron steht) endlos mit FADE_ALPHA weiter - "immer in
+// Bewegung" statt einmal "gesetzt".
 const PREWARM_FRAMES = 500;
 const FADE_ALPHA = 0.0012;
 // Bei diesem niedrigen FADE_ALPHA (bewusst so belassen - hoehere Werte wurden getestet und
@@ -28,11 +29,12 @@ const AREA_PER_PARTICLE = 9000;
 const MIN_PARTICLES = 140;
 const MAX_PARTICLES_MOBILE = 240;
 const MAX_PARTICLES_DESKTOP = 460;
-// Prewarm (Erststart/Resize, synchron) darf kraeftig zeichnen - passiert einmalig, nicht spuerbar.
-// Die laufende Animation zeichnet dagegen mit deutlich niedrigerer Alpha: bei gleicher Staerke
-// wie Prewarm wurden die Konvergenz-Linien schon nach ~10s spuerbar dicker/dunkler (im Browser
-// verglichen, nicht nur angenommen - siehe CHANGELOG). Mit LIVE_INK_ALPHA bleibt das Bild ueber
-// mehrere Sekunden fast unveraendert und entwickelt sich nur ueber deutlich laengere Zeitraeume.
+// Aufbau-Phase darf kraeftig zeichnen - passiert einmalig beim Erststart/Resize/Reset.
+// Die anschliessende Live-Phase (Endlos-Modus) zeichnet dagegen mit deutlich niedrigerer Alpha:
+// bei gleicher Staerke wie beim Aufbau wurden die Konvergenz-Linien schon nach ~10s spuerbar
+// dicker/dunkler (im Browser verglichen, nicht nur angenommen - siehe CHANGELOG). Mit
+// LIVE_INK_ALPHA bleibt das Bild ueber mehrere Sekunden fast unveraendert und entwickelt sich nur
+// ueber deutlich laengere Zeitraeume.
 const PREWARM_INK_ALPHA = 0.075;
 const LIVE_INK_ALPHA = 0.025;
 const ACCENT_ALPHA_MULT = 3.2;
@@ -156,6 +158,9 @@ export function FlowFieldBackground({ durationSeconds }: { durationSeconds?: num
 
     const durationFrames =
       durationSeconds !== undefined ? Math.round(durationSeconds * 60) : undefined;
+    // Aufbau-Phase dauert beim Endlos-Modus PREWARM_FRAMES, beim zeitbegrenzten Modus (Inbox)
+    // ist die gesamte Laufzeit selbst die Aufbau-Phase - kein separater Live/Fade-Abschnitt.
+    const buildFrames = durationFrames !== undefined ? durationFrames : PREWARM_FRAMES;
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const inkRgb = INKS.map(hexToRgb);
@@ -169,6 +174,7 @@ export function FlowFieldBackground({ durationSeconds }: { durationSeconds?: num
     let particles: Particle[] = [];
     let rafId = 0;
     let sessionFrame = 0;
+    let phase: "building" | "live" = "building";
     let resizeTimer: ReturnType<typeof setTimeout> | undefined;
     let stopped = false;
 
@@ -237,25 +243,45 @@ export function FlowFieldBackground({ durationSeconds }: { durationSeconds?: num
       }
     }
 
-    // Ohne durationFrames: laeuft endlos - jeder Frame faedet den Canvas minimal Richtung
-    // Papierfarbe, bevor neue Segmente gezeichnet werden. Alte Striche loesen sich langsam auf,
-    // neue kommen laufend dazu: die Fläche kommt nie zur Ruhe, saettigt aber auch nie zu Schwarz.
-    // Mit durationFrames: stoppt nach dieser Frame-Zahl dauerhaft und bleibt stehen.
+    // Phase "building": sichtbarer Aufbau ueber echte, gemalte Frames (kein Fade, volle
+    // PREWARM_INK_ALPHA) - der Nutzer sieht die Linien ueber ~buildFrames/60 Sekunden entstehen,
+    // statt sie fertig vorzufinden. Endlos-Modus wechselt danach in Phase "live" (LIVE_INK_ALPHA
+    // + Fade, laeuft fuer immer weiter). Zeitbegrenzter Modus (Inbox) stoppt nach der Aufbauphase.
     function loop() {
       if (stopped) return;
-      step(LIVE_INK_ALPHA, true);
-      sessionFrame += 1;
-      if (durationFrames !== undefined) {
-        if (sessionFrame >= durationFrames) {
-          stopped = true;
-          return;
+      if (phase === "building") {
+        step(PREWARM_INK_ALPHA, false);
+        sessionFrame += 1;
+        if (sessionFrame >= buildFrames) {
+          if (durationFrames !== undefined) {
+            stopped = true;
+            return;
+          }
+          phase = "live";
+          sessionFrame = 0;
         }
-      } else if (sessionFrame >= LONG_SESSION_RESET_FRAMES) {
-        setup();
-        for (let i = 0; i < PREWARM_FRAMES; i++) step(PREWARM_INK_ALPHA, false);
-        sessionFrame = 0;
+      } else {
+        step(LIVE_INK_ALPHA, true);
+        sessionFrame += 1;
+        if (sessionFrame >= LONG_SESSION_RESET_FRAMES) {
+          setup();
+          phase = "building";
+          sessionFrame = 0;
+        }
       }
       rafId = requestAnimationFrame(loop);
+    }
+
+    function start() {
+      if (prefersReducedMotion) {
+        // Kein Animations-Loop erlaubt: synchron auf den fertigen Stand vorzeichnen und einfrieren.
+        for (let i = 0; i < buildFrames; i++) step(PREWARM_INK_ALPHA, false);
+        stopped = true;
+      } else {
+        phase = "building";
+        sessionFrame = 0;
+        rafId = requestAnimationFrame(loop);
+      }
     }
 
     function handleVisibility() {
@@ -269,27 +295,21 @@ export function FlowFieldBackground({ durationSeconds }: { durationSeconds?: num
     function handleResize() {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
+        // Mobile Browser feuern beim Scrollen resize-Events, wenn die Adressleiste ein-/
+        // ausblendet (aendert nur innerHeight um ~50-100px, nie innerWidth). Nur bei echter
+        // Breitenaenderung oder einer deutlichen Hoehenaenderung (>150px, z. B. Rotation/
+        // Fenster-Resize) neu aufbauen - sonst wuerde jeder Scroll das Bild zuruecksetzen.
+        const widthChanged = window.innerWidth !== width;
+        const heightChanged = Math.abs(window.innerHeight - height) > 150;
+        if (!widthChanged && !heightChanged) return;
         cancelAnimationFrame(rafId);
         setup();
-        for (let i = 0; i < PREWARM_FRAMES; i++) step(PREWARM_INK_ALPHA, false);
-        sessionFrame = 0;
-        if (prefersReducedMotion) {
-          stopped = true;
-        } else {
-          rafId = requestAnimationFrame(loop);
-        }
+        start();
       }, 200);
     }
 
     setup();
-    // Erst ohne Fade vorzeichnen, damit das Bild sofort dicht aussieht statt leer zu starten.
-    for (let i = 0; i < PREWARM_FRAMES; i++) step(PREWARM_INK_ALPHA, false);
-    if (prefersReducedMotion) {
-      // Kein Animations-Loop: bleibt beim vorgezeichneten, "gesetzten" Bild stehen.
-      stopped = true;
-    } else {
-      rafId = requestAnimationFrame(loop);
-    }
+    start();
 
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("resize", handleResize);
