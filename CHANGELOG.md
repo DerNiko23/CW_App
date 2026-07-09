@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## [2026-07-09] Video-Karten + Action-Buttons ins Glass-Design übertragen
+
+Auf explizitem Nutzerwunsch (nach Ansicht der Toolbar im Glass-Stil) die vorherige Scope-Grenze
+("nicht auf Video-Zeilen") bewusst aufgehoben: `components/inbox/video-card.tsx` von einer
+full-bleed Zeile (`-mx-4`, Hairline-Trennung via `divide-y` im Listen-Container) auf eine
+eigenständige, abgerundete Glass-Karte umgestellt (`rounded-[28px] border-white/50 bg-white/55
+backdrop-blur-md` + Inset-Highlight). Listen-Container (`app/page.tsx`) von `divide-y
+divide-border bg-background` auf `gap-4` – Karten haben jetzt sichtbaren Abstand statt aneinander
+gereiht zu sein, Canvas schimmert gedämpft in den Zwischenräumen durch.
+
+**Deckkraft bewusst höher als bei den Toolbar-Chips** (`bg-white/55` statt `bg-white/20`): Karten
+tragen deutlich mehr Fließtext (Titel, Zitat, Meta-Zeile) als ein Toolbar-Label – dieselbe
+Transparenz wie bei den Chips wäre ein Kontrastrisiko gewesen. Per `getComputedStyle` geprüft
+(Titel `rgb(20,20,20)` auf der 55%-Weiß-Fläche) statt nur angenommen.
+
+**`components/inbox/action-buttons.tsx` – alle drei Zustände:**
+- **Annehmen**: bleibt grün (Ampel-Signal unverändert eindeutig), aber jetzt Glas statt Vollton
+  (`bg-success/70 backdrop-blur-md`, 70% Deckkraft hält die Farbidentität klar erkennbar).
+- **Ablehnen**: neutrale Glass-Box (identisch zu den Filter-Chips), aber **nur Text/Icon in
+  `text-destructive`** statt eine rote Box – explizit auch `aria-expanded:text-destructive`
+  gesetzt, weil die Outline-Variante beim geöffneten Grund-Popover sonst per Cascade-Reihenfolge
+  auf `aria-expanded:text-foreground` zurückgefallen wäre (dieselbe Falle, die beim
+  Filter-Trigger-Textversuch schon einmal beobachtet und nachträglich gefixt wurde – diesmal von
+  Anfang an korrekt gesetzt und live verifiziert: Farbe bleibt bei geöffnetem Menü rot).
+- **Als erledigt markieren**: gleiche dunkle Glas-Tönung wie "Anmelden"/"Importieren"
+  (`bg-neutral-900/60 backdrop-blur-md backdrop-saturate-150`).
+
+Reject-Reason-Popover (Liste der 4 Gründe) bewusst unverändert solide – funktionales Overlay,
+gleiche Begründung wie beim Filter-Panel.
+
+Live verifiziert (nicht nur angenommen): Karten-Radius/-Deckkraft/-Blur per `getComputedStyle`
+bestätigt, Ablehnen-Textfarbe bleibt bei geöffnetem Popover rot, "Als erledigt markieren" mit
+`?status=accepted` sichtbar geprüft, 320px/375px ohne horizontales Overflow. `npm run
+lint`/`npm run build` sauber.
+
 ## [2026-07-09] Glass-Design + Flow-Field-Hintergrund auf die Inbox übertragen
 
 Auf Nutzerwunsch den Login-Look auf die Inbox-Toolbar ausgeweitet: URL-Import-Feld

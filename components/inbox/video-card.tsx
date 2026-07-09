@@ -13,7 +13,7 @@ export function VideoCard({ item, priority = false }: { item: InboxItem; priorit
   const showActions = video.status === "new" || video.status === "accepted";
 
   return (
-    <article className="group -mx-4 px-4 py-5 transition-colors duration-200 hover:bg-muted/40 sm:-mx-6 sm:px-6 sm:py-6">
+    <article className="group rounded-[28px] border border-white/50 bg-white/55 px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-md transition-colors duration-200 hover:bg-white/65 sm:px-6 sm:py-6">
       <Link
         href={`/videos/${video.id}`}
         className="block rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"

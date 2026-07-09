@@ -72,7 +72,7 @@ export function ActionButtons({
           size={size}
           onClick={handleAccept}
           disabled={isPending}
-          className="bg-success text-success-foreground hover:bg-success/85"
+          className="border border-white/25 bg-success/70 text-success-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-md hover:bg-success/80"
         >
           {isPending ? <Loader2 className="animate-spin" /> : <Check />}
           Annehmen
@@ -81,7 +81,12 @@ export function ActionButtons({
           <PopoverTrigger
             disabled={isPending}
             render={
-              <Button size={size} variant="outline" disabled={isPending}>
+              <Button
+                size={size}
+                variant="outline"
+                disabled={isPending}
+                className="border-white/40 bg-white/20 text-destructive shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-md hover:bg-white/30 aria-expanded:text-destructive"
+              >
                 <X /> Ablehnen
               </Button>
             }
@@ -111,7 +116,12 @@ export function ActionButtons({
   if (status === "accepted") {
     return (
       <div onClick={stop}>
-        <Button size={size} onClick={handleDone} disabled={isPending}>
+        <Button
+          size={size}
+          onClick={handleDone}
+          disabled={isPending}
+          className="border border-white/15 bg-neutral-900/60 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-md backdrop-saturate-150 hover:bg-neutral-900/75"
+        >
           {isPending ? <Loader2 className="animate-spin" /> : <CircleCheck />}
           Als erledigt markieren
         </Button>

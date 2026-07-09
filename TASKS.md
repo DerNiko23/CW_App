@@ -106,6 +106,12 @@
   Auto-Search-Button-Höhe (`items-end`-Fix) und Filter-Label-Umbenennung ("Score-Bereich" →
   "Score") mit erledigt. Live verifiziert (Panel-Funktion, 10s-Stopp per Canvas-Checksumme,
   Mobile), Build/Lint grün. Details in CHANGELOG.
+- [x] Video-Karten + Annehmen/Ablehnen/Als-erledigt-Buttons ins Glass-Design übertragen (explizite
+  Aufhebung der vorherigen Scope-Grenze auf Nutzerwunsch). Karten jetzt eigenständig,
+  abgerundet, mit Abstand statt full-bleed Hairline-Zeilen; Annehmen bleibt grün, Ablehnen
+  bekommt rote Schrift statt roter Box (inkl. Fix für den bekannten `aria-expanded`-Cascade-Bug),
+  Als-erledigt-markieren im dunklen Glas-Stil. Live verifiziert (Kontrast, alle drei
+  Button-Zustände, 320px/375px), Build/Lint grün. Details in CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

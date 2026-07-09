@@ -68,7 +68,7 @@ export default async function InboxPage({
         </div>
       ) : (
         <KeyboardTriageProvider>
-          <div className="relative z-10 flex flex-col divide-y divide-border bg-background">
+          <div className="relative z-10 flex flex-col gap-4">
             {items.map((item, index) => (
               <TriageRow
                 key={item.video.id}
