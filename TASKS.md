@@ -136,6 +136,26 @@
   `TRANSCRIPT_FETCH_ATTEMPTS` 3→5 dann 4/4 (vom Nutzer selbst im Browser gegen die Preview
   bestätigt). Nebenbei entdeckt+behoben: `AUTH_PASSWORD` war für die Preview-Umgebung leer
   (Production unverändert, echtes Passwort). Details in CHANGELOG.
+- [x] **Auto-Search fand trotz Proxy-Fix 0 neue Videos** – `discovery_log` blockierte 70 alte
+  `no_transcript`-Skips (von vor dem Proxy-Fix) dauerhaft von erneuter Prüfung.
+  `filterUnseenVideoIds()` schließt `no_transcript`-Skips jetzt von der "schon gesehen"-Liste aus
+  (`off_topic`/`no_claims` bleiben ausgeschlossen, sind stabile inhaltliche Urteile). Live
+  verifiziert: `--discover`-Lauf fand danach 2 statt 0 neue IDs, eine erfolgreich importiert
+  (100 % Confidence, Score 70). Details in CHANGELOG.
+- [ ] ⚠ **Reaktions-Baukasten verschwindet lautlos ohne Mythos-Match** – entdeckt beim Nachtesten
+  mit einem manuell importierten Video. Sichtbarkeitsbedingung in `app/videos/[id]/page.tsx:186`:
+  `(video.status === "accepted" || video.status === "done") && claim.myth`. Ohne gematchten
+  Mythos (`claim.myth === null`, weil `normalizeAndMatch()` in `lib/pipeline/claude.ts` keinen
+  Treffer in der fest kuratierten `myths`-Tabelle fand) wird der ganze Abschnitt gar nicht erst
+  gerendert – kein Hinweis, keine Erklärung. Betrifft potenziell jedes manuell importierte Video,
+  dessen Behauptung keinem der vorab kuratierten Mythen entspricht (bei den 18 Demo-Videos war
+  das kein Problem, weil die gezielt zu vorhandenen Mythen passen). Ursache liegt tiefer:
+  `generateAndSaveReactionScript()` (`lib/reaction/generate.ts:18`) wirft bewusst einen Fehler
+  ohne `myth_id`, weil das Reaktions-Skript ein verifiziertes `verdict` aus der Mythen-DB braucht
+  und nichts frei erfinden soll. Fix-Vorschlag (noch nicht umgesetzt, mit Nutzer abstimmen):
+  bei fehlendem Mythos-Match eine ehrliche Inline-Meldung zeigen ("Kein Reaktions-Baukasten
+  möglich – keinem bekannten Mythos zugeordnet") statt den Bereich stillschweigend wegzulassen –
+  passt zum bestehenden Prinzip "ehrliche Fehlermeldungen statt stiller Fails" im Projekt.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

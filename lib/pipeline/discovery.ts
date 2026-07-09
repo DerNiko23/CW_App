@@ -41,9 +41,19 @@ async function filterUnseenVideoIds(
 ): Promise<string[]> {
   if (videoIds.length === 0) return [];
 
+  // Fix 2026-07-10: no_transcript-Skips waren vor dem Proxy-Fix (siehe transcript.ts) fast immer
+  // ein Infrastruktur-Problem (Vercel-IP-Block), keine echte Aussage ueber das Video - anders als
+  // off_topic/no_claims, die stabile inhaltliche Urteile sind und bei erneuter Pruefung mit hoher
+  // Wahrscheinlichkeit gleich ausfallen. 70 von 100 discovery_log-Eintraegen waren no_transcript
+  // und blockierten dadurch dauerhaft jede Neuentdeckung, obwohl der Proxy die meisten davon jetzt
+  // loesen wuerde. Deshalb zaehlen no_transcript-Skips hier nicht mehr als "schon gesehen".
   const [{ data: existingVideos }, { data: loggedSkips }] = await Promise.all([
     supabase.from("videos").select("external_id").in("external_id", videoIds),
-    supabase.from("discovery_log").select("external_id").in("external_id", videoIds),
+    supabase
+      .from("discovery_log")
+      .select("external_id")
+      .in("external_id", videoIds)
+      .neq("reason", "no_transcript"),
   ]);
 
   const seen = new Set([

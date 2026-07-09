@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## [2026-07-10] Auto-Search fand trotz Proxy-Fix keine neuen Videos (discovery_log blockierte dauerhaft)
+
+Nutzer meldete: Auto-Search soll 5 passende Videos suchen und importieren, fand aber keine. Root
+Cause via `npm run pipeline:test -- --discover` diagnostiziert (echter Discovery-Lauf,
+proxy-geroutet): `Suchen durchgeführt: 5, gefundene IDs: 47, neue IDs: 0`.
+
+**Ursache:** `filterUnseenVideoIds()` (`lib/pipeline/discovery.ts`) behandelt **jeden** Eintrag in
+`discovery_log` als dauerhaft "schon gesehen", unabhängig vom Skip-Grund. Von 100
+`discovery_log`-Einträgen waren **70 mit `reason=no_transcript`** – praktisch alle von *vor* dem
+Proxy-Fix (2026-07-10, siehe Eintrag unten), als YouTube auf Vercel fast jeden Transkript-Abruf
+blockierte. Diese Videos wurden dadurch permanent von zukünftigen Auto-Search-Läufen
+ausgeschlossen, obwohl der eigentliche Blocker (IP-Blocking) inzwischen gelöst ist – der Pool an
+"neuen" Kandidaten war schlicht komplett verbraucht.
+
+**Fix:** `discovery_log`-Query in `filterUnseenVideoIds()` schließt jetzt `reason = 'no_transcript'`
+aus (`.neq("reason", "no_transcript")`). Begründung für die Unterscheidung: `off_topic`/`no_claims`
+sind stabile *inhaltliche* Urteile (bei erneuter Prüfung mit hoher Wahrscheinlichkeit gleiches
+Ergebnis) – `no_transcript` war dagegen fast immer ein *Infrastruktur*-Problem, keine Aussage über
+das Video selbst. Bereits vorhandene `videos`-Einträge (echte Importe, jeder Status) bleiben
+weiterhin ausgeschlossen wie bisher.
+
+**Verifikation:** Erneuter `--discover`-Lauf danach: `neue IDs: 2` (statt 0). Eine der beiden wurde
+erfolgreich durch die volle Pipeline verarbeitet und landet mit 100 % Confidence / Score 70 in der
+echten "Neu"-Inbox – die andere korrekt wieder geskippt (`Transcript is disabled on this video`,
+ein echter Content-Fall ohne Untertitel, kein Proxy-Problem). `npm run lint`/`npm run build`/
+`npm test` (45/45) sauber.
+
 ## [2026-07-10] YouTube-Transkript-Blocking gelöst: Webshare-Residential-Proxy
 
 Die seit 2026-07-08 dokumentierte Einschränkung ("YouTube blockiert Transkript-Abrufe von
