@@ -20,6 +20,7 @@ const SKIP_LABELS: Record<string, string> = {
     "YouTube blockiert Transkript-Abrufe von diesem Server. Kein Problem mit diesem Video – aktuell technisch nicht vermeidbar.",
   off_topic: "Video ist themenfremd (kein Ernährung/Fitness/Gesundheit).",
   no_claims: "Keine konkrete Tatsachenbehauptung im Transkript gefunden.",
+  own_channel: "Das ist ein Video von deinem eigenen Kanal – wird nicht als Vorschlag importiert.",
 };
 
 export function UrlImportForm() {

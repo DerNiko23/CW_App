@@ -1,5 +1,48 @@
 # CHANGELOG
 
+## [2026-07-10] Chris' eigene Videos werden nie mehr als Vorschlag importiert
+
+Nutzer: Auto-Search/Import soll nie Chris' eigene Videos (@christianwolf) als Faktencheck-
+Vorschlag vorschlagen. Channel-ID via YouTube Data API aufgelöst (`channels.list?forHandle=
+christianwolf`) statt geraten – `UC_NsZgQdK4lTleq_siGOdJw`, verifiziert (148k Abonnenten, Titel
+"Christian Wolf" passt).
+
+**Umsetzung:**
+- `VideoMetadata` (`lib/pipeline/types.ts`) um `channelId` ergänzt, `getVideoDetails()`
+  (`lib/pipeline/youtube.ts`) befüllt es jetzt aus `snippet.channelId` (exakter Vergleich statt
+  fragilem Namens-Abgleich, der bei Namensänderungen brechen würde).
+- `processVideo()` (`lib/pipeline/process.ts`) prüft `metadata.channelId` **vor** dem
+  Transkript-Abruf/Claude-Aufwand – spart bei jedem Treffer sowohl Proxy-Traffic als auch
+  API-Kosten. Neuer `SkipReason` `own_channel`, greift einheitlich für Auto-Search UND
+  manuellen URL-Import (beide laufen durch `processVideo()`).
+- Neue Migration `0006_own_channel_skip_reason.sql` (Postgres-Enum `discovery_skip_reason` um
+  `own_channel` erweitert) – **muss noch manuell im Supabase SQL Editor ausgeführt werden** (wie
+  0001–0005). Bis dahin funktioniert der Filter bereits korrekt (Video wird nicht importiert),
+  nur der `discovery_log`-Eintrag dafür schlägt bis zur Migration fehl (abgefangen, nur
+  Server-Log, kein Nutzer-facing Fehler).
+- Inline-Meldung für manuellen Import ergänzt (`components/inbox/url-import-form.tsx`): "Das ist
+  ein Video von deinem eigenen Kanal – wird nicht als Vorschlag importiert."
+
+**Live verifiziert:** echtes aktuelles Video von Chris' Kanal (`1wXLQdXMoq4`) per YouTube-Suche
+geholt, durch `processVideoByUrl()` geschickt – korrekt sofort mit `own_channel` geskippt, kein
+Transkript-Abruf, keine Claude-Calls, kein `videos`-Eintrag angelegt. `npm run lint`/
+`npm run build`/`npm test` (45/45) sauber.
+
+## [2026-07-10] MASTERPLAN.md korrigiert: TikTok/Instagram-Import funktioniert aktuell nicht
+
+Nutzer fragte, ob er testweise eine TikTok-URL manuell importieren könne. Codeprüfung ergab:
+`processVideoByUrl` (`lib/pipeline/import.ts`) ist vollständig YouTube-hartcodiert –
+`parseVideoId` (`lib/pipeline/youtube.ts`) erkennt ausschließlich `youtube.com`/`youtu.be`, eine
+TikTok-URL wirft sofort `Konnte keine YouTube-Video-ID extrahieren`. MASTERPLAN.md §5 behauptete
+bisher fälschlich "Adapter-Interface implementiert, manueller URL-Import funktioniert" für
+TikTok/Instagram – das stimmte nie mit dem tatsächlichen Code überein (kein
+`lib/pipeline/tiktok.ts`/`instagram.ts`, keine Plattform-Weiche irgendwo im Import-Pfad).
+
+MASTERPLAN.md §5 korrigiert: Tabelle und Manueller-URL-Import-Absatz sagen jetzt ehrlich, dass nur
+YouTube funktioniert, mit Verweis auf den ausgearbeiteten (aber bewusst zurückgestellten)
+Lösungsvorschlag in IDEAS.md. Loom-Formulierung entsprechend angepasst, damit sie nicht mehr
+implizit behauptet, TikTok/Instagram-Import sei bereits gebaut worden.
+
 ## [2026-07-10] Auto-Search fand trotz Proxy-Fix keine neuen Videos (discovery_log blockierte dauerhaft)
 
 Nutzer meldete: Auto-Search soll 5 passende Videos suchen und importieren, fand aber keine. Root

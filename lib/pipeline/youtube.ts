@@ -12,6 +12,7 @@ type YouTubeVideosResponse = {
     id: string;
     snippet?: {
       title?: string;
+      channelId?: string;
       channelTitle?: string;
       publishedAt?: string;
       thumbnails?: { high?: { url?: string }; medium?: { url?: string } };
@@ -97,6 +98,7 @@ export async function getVideoDetails(
     url: `https://www.youtube.com/watch?v=${item.id}`,
     title: item.snippet?.title ?? "",
     channel: item.snippet?.channelTitle ?? "",
+    channelId: item.snippet?.channelId ?? "",
     publishedAt: item.snippet?.publishedAt ?? null,
     thumbnail:
       item.snippet?.thumbnails?.high?.url ??

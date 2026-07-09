@@ -18,7 +18,34 @@
 - **Trend-Radar**: Welche Mythen tauchen diese Woche gehäuft auf? (Aggregation über Claims)
 
 ## Plattformen
-- TikTok/Instagram-Automatisierung, falls je API-Zugang (Adapter-Interfaces liegen bereit)
+- **TikTok/Instagram Auto-Search + Import (Lösungsvorschlag ausgearbeitet, bewusst nicht
+  umgesetzt, 2026-07-10):** Recherche bestätigt, MASTERPLAN §5 stimmt weiterhin – TikTok Research
+  API ist explizit nur für akademische/Non-Profit-Forschung ("commercial users, creators, and
+  advertisers are explicitly ineligible"), Instagram Graph API hat keine offene Such-Endpoint für
+  fremde Inhalte (Hashtag-Suche nur für eigenen Business-Account, 30 Hashtags/7 Tage gedeckelt).
+  Kein kostenloser offizieller Weg, weder für uns noch für irgendwen sonst in unserer Situation.
+  **Möglicher Weg (falls je gewünscht):** dieselbe Grundidee wie beim YouTube-Proxy-Fix – eine
+  kleine, kostenbegrenzte Drittanbieter-Infrastruktur statt Verzicht. Etablierter Markt an
+  Social-Media-Scraping-APIs (Apify-Actors, [ScrapeCreators](https://scrapecreators.com/),
+  HikerAPI) bietet Hashtag-/Keyword-Suche + Metadaten + teils Transkripte, sehr günstig
+  (~$0,0003–$0,005/Ergebnis). ScrapeCreators sticht heraus: eine einheitliche API für TikTok UND
+  Instagram (und YouTube), Prepaid-Credits statt Abo (harte Kostenobergrenze von Natur aus), 1000
+  Gratis-Credits zum Testen. Architektur bräuchte kaum Umbau: `videos.platform` existiert bereits
+  seit `0001_init.sql`, Topic Detection/Claim Extraction/Scoring/Inbox sind schon
+  plattform-agnostisch – nur ein `PlatformCollector`-Interface (`searchIds`/`getDetails`/
+  `fetchTranscript`) fehlt, YouTube (`lib/pipeline/youtube.ts`, `transcript.ts`) wäre die erste
+  Implementierung davon, TikTok/Instagram neue Implementierungen desselben Interfaces.
+  **Zwei echte Unbekannte vor einer Umsetzung:** (1) Transkript-Qualität auf TikTok/Instagram
+  vermutlich schlechter als YouTube (oft Voiceover ohne verlässliche native Untertitel, manche
+  Anbieter lösen das über eigene KI-Transkription – höhere Kosten/Fehlerquote), (2)
+  View-Zahlen-Vergleichbarkeit für den Opportunity Score müsste mit echten Daten kalibriert
+  werden. **Falls je verfolgt:** Spike ohne Code zuerst (Gratis-Trial gegen 5–10 bekannte
+  Chris-relevante Accounts testen, Transkript-Abdeckung real prüfen), dann ein Collector zuerst
+  (TikTok vor Instagram), Auto-Search-Plattform-Umschalter statt stillem Kosten-Verdreifachen bei
+  jedem Klick, eigene `scraper_quota_usage`-Tabelle analog `youtube_quota_usage`, und die
+  Snapshot-Cron-Erweiterung auf neue Plattformen explizit als eigener Rücksprache-Schritt (nicht
+  automatisch mitgezogen). Grund für "nicht jetzt": Nutzer wollte den Weg dokumentiert, aber nicht
+  umgesetzt haben.
 - Podcast-Quellen (Spotify/RSS + Transkription)
 
 ## Workflow

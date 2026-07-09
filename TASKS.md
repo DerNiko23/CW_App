@@ -156,6 +156,21 @@
   bei fehlendem Mythos-Match eine ehrliche Inline-Meldung zeigen ("Kein Reaktions-Baukasten
   möglich – keinem bekannten Mythos zugeordnet") statt den Bereich stillschweigend wegzulassen –
   passt zum bestehenden Prinzip "ehrliche Fehlermeldungen statt stiller Fails" im Projekt.
+- [ ] ⚠ **"Noch kein Video von Chris" ist nicht gegen seinen echten Kanal verifiziert** – aktuell
+  **nicht behebbar** ohne Chris/Kanal-Zugriff, nur dokumentiert. `covered_by_chris` ist bei allen
+  32 kuratierten Mythen (`0003_myths_seed.sql`) auf `false`, `chris_video_url` nie befüllt – nie
+  einzeln gegen seinen echten Kanal geprüft, nur Default beim Kuratieren. Die Novelty-Aussage
+  bedeutet dadurch faktisch nur "noch nicht innerhalb dieser App erledigt", nicht "Chris hat das
+  nie behandelt" (`lib/pipeline/novelty.ts`). Details + Fix-Idee (manueller Abgleich aller 32
+  Mythen gegen Chris' Kanal, falls/wenn möglich) in README.md.
+- [ ] ⚠ **Migration `0006_own_channel_skip_reason.sql` muss noch im Supabase SQL Editor
+  ausgeführt werden** (wie 0001–0005) – erweitert das `discovery_skip_reason`-Enum um
+  `own_channel`. Der Filter selbst funktioniert schon ohne die Migration (Chris' eigene Videos
+  werden korrekt nicht importiert), nur das Skip-Logging dafür schlägt bis dahin fehl.
+- [x] **Chris' eigene Videos (@christianwolf) werden nie mehr als Vorschlag importiert** –
+  Channel-ID via YouTube API aufgelöst (`UC_NsZgQdK4lTleq_siGOdJw`), `processVideo()` prüft das
+  vor Transkript-/Claude-Aufwand, gilt für Auto-Search und manuellen Import gleichermaßen. Live
+  mit einem echten aktuellen Video seines Kanals verifiziert. Details in CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

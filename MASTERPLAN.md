@@ -128,13 +128,13 @@ Normalisiert auf 0–100. Gewichte in Supabase konfigurierbar (→ Adaptive Rank
 
 | Plattform  | Ansatz |
 |------------|--------|
-| YouTube    | Voll automatisiert via Data API v3 (Quota-Budget: siehe ROADMAP) |
-| TikTok     | Kein offener Such-API-Zugang → Adapter-Interface implementiert, manueller URL-Import funktioniert |
-| Instagram  | dito |
+| YouTube    | Voll automatisiert via Data API v3 (Quota-Budget: siehe ROADMAP). Manueller URL-Import funktioniert ebenfalls. |
+| TikTok     | Kein offener Such-API-Zugang für einen kommerziellen Ein-Personen-Use-Case (TikTok Research API ist explizit auf akademische/Non-Profit-Forschung beschränkt). **Aktuell weder Auto-Search noch manueller URL-Import umgesetzt** – `processVideoByUrl` (`lib/pipeline/import.ts`) ist vollständig YouTube-hartcodiert (`parseVideoId` erkennt nur `youtube.com`/`youtu.be`). Lösungsvorschlag (Drittanbieter-Scraping-API, Adapter-Interface) ausgearbeitet in IDEAS.md, bewusst zurückgestellt. |
+| Instagram  | dito – Instagram Graph API hat keine offene Such-Endpoint für fremde Inhalte (Hashtag-Suche nur für eigenen Business-Account, stark gedeckelt). |
 
-**Manueller URL-Import:** Chris (oder Community) wirft eine URL ein → App zieht Transkript/Daten und jagt sie durch dieselbe Pipeline. Kein Fake-Feature, sondern ehrliche Architektur.
+**Manueller URL-Import (Stand: nur YouTube):** Chris (oder Community) wirft eine YouTube-URL ein → App zieht Transkript/Daten und jagt sie durch dieselbe Pipeline. TikTok/Instagram-URLs liefern aktuell einen Fehler ("Konnte keine YouTube-Video-ID extrahieren") statt eines Imports – kein Fake-Feature-Versprechen, sondern ehrlich auf den tatsächlichen Umsetzungsstand korrigiert (2026-07-10, vorher stand hier fälschlich "funktioniert" für alle drei Plattformen).
 
-Loom-Formulierung: *"Instagram und TikTok erlauben keine vollständige öffentliche Suche. Deshalb habe ich Adapter vorgesehen und zusätzlich einen manuellen URL-Import entwickelt."*
+Loom-Formulierung: *"Instagram und TikTok erlauben keine vollständige öffentliche Suche. Ich habe die Architektur so gebaut, dass ein Adapter pro Plattform reicht – für YouTube live automatisiert, für TikTok/Instagram als ausgearbeiteter, aber bewusst zurückgestellter nächster Schritt (siehe IDEAS.md)."*
 
 ---
 

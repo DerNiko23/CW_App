@@ -104,6 +104,25 @@ findet das uninteressant" ist etwas anderes als "Chris hat dazu schon ein Video 
 senken die Novelty gleichermaßen, aber nur Letzteres zeigt der UI als "bereits behandelt" an,
 siehe `lib/inbox/scoreBullets.ts`).
 
+### Bekannte Einschränkung: "Noch kein Video von Chris" ist nicht gegen seinen echten Kanal verifiziert
+
+Die Novelty-Aussage (`isMythNovel()`, `lib/pipeline/novelty.ts`) stützt sich auf zwei Quellen:
+`myths.covered_by_chris` (statisches Flag pro Mythos) und `hasDoneVideoForMyth()` (dynamisch,
+prüft nur Videos, die *innerhalb dieser App* als "Erledigt" markiert wurden). Geprüft
+(2026-07-10): **alle 32 kuratierten Mythen** aus `0003_myths_seed.sql` haben `covered_by_chris =
+false`, `chris_video_url` ist bei keinem einzigen befüllt – das Flag wurde beim Kuratieren
+pauschal auf `false` gesetzt, nicht einzeln gegen Chris' echten YouTube-Kanal geprüft.
+
+**Konsequenz:** "Noch kein Video von Chris zu genau diesem Mythos" bedeutet aktuell faktisch nur
+"noch kein Video *über diese App* dazu erledigt" – nicht "Chris hat das nie behandelt". Hat Chris
+z. B. vor der Nutzung dieser App schon ein Video zu einem der 32 Mythen gemacht, zeigt die App das
+fälschlich als "noch offen" an.
+
+**Nicht behoben, weil:** eine korrekte Prüfung erfordert manuellen Abgleich aller 32 Mythen gegen
+Chris' tatsächliche Video-Historie (Zugriff/Wissen, das hier nicht vorliegt) – kein
+Implementierungsfehler, sondern fehlende Ausgangsdaten. Falls behebbar: `covered_by_chris` +
+`chris_video_url` pro Mythos nachträglich von Chris/mit Kanal-Zugriff befüllen.
+
 ## Manueller URL-Import (`components/inbox/url-import-form.tsx`)
 
 MASTERPLAN §5: Formular auf der Inbox, ruft `/api/pipeline/import` auf (volle Pipeline für

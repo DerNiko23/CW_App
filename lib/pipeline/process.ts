@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { detectTopic, extractClaims, normalizeAndMatch } from "./claude";
 import { computeConfidence } from "./confidence";
+import { CHRIS_YOUTUBE_CHANNEL_ID } from "./constants";
 import { logSkip } from "./discoveryLog";
 import { hasDoneVideoForMyth, isMythNovel } from "./novelty";
 import { computeOpportunityScore, computeVelocityFromSnapshots } from "./score";
@@ -51,6 +52,14 @@ export async function processVideo(params: {
 }): Promise<ProcessVideoResult> {
   const { supabase, metadata, myths, weights } = params;
   const videoRef = { externalId: metadata.externalId, url: metadata.url };
+
+  // Chris' eigene Videos sollen nie als Faktencheck-Vorschlag erscheinen - vor dem teuren
+  // Transkript-/Claude-Aufwand geprueft, spart bei jedem Treffer sowohl Proxy-Traffic als auch
+  // Claude-API-Calls.
+  if (metadata.channelId === CHRIS_YOUTUBE_CHANNEL_ID) {
+    await logSkip(supabase, videoRef, "own_channel");
+    return { status: "skipped", reason: "own_channel" };
+  }
 
   const transcript = await fetchTranscript(metadata.externalId);
   if (!transcript) {

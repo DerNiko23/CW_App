@@ -58,6 +58,7 @@ export type VideoMetadata = {
   url: string;
   title: string;
   channel: string;
+  channelId: string;
   publishedAt: string | null;
   thumbnail: string | null;
   views: number;
@@ -92,4 +93,4 @@ export type ScoreBreakdown = {
   total: number;
 };
 
-export type SkipReason = "no_transcript" | "off_topic" | "no_claims" | "error";
+export type SkipReason = "no_transcript" | "off_topic" | "no_claims" | "own_channel" | "error";
