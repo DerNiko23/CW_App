@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## [2026-07-09] Ablehnen-Dropdown im Filter-Panel-Design
+
+Das Grund-für-Ablehnung-Menü (`components/inbox/action-buttons.tsx`, `PopoverContent`) nutzte noch
+die Standard-Popover-Optik (`rounded-lg`/2,4px, `p-2.5`) statt der beim Filter-Redesign
+eingeführten Panel-Optik. Auf `rounded-[12px] p-4` umgestellt – identische Werte wie das
+Filter-Dropdown-Panel (`components/inbox/filter-bar.tsx`), keine neue Ausnahme, sondern
+Angleichung an eine schon bestehende. Reason-Liste (Klick-Buttons, kein Multi-Select) und
+Popover-Positionierung (`align="end"`) unverändert – die Interaktion unterscheidet sich bewusst
+vom Checkbox+Anwenden-Muster der Filter (Einzelklick löst sofort die Ablehnung aus), nur die
+Container-Optik wurde angeglichen.
+
+`npm run lint`/`npm run build` sauber. Visuelle Bestätigung diese Runde durch denselben
+Preview-Tool-Fokus-Zustand wie beim letzten Eintrag blockiert (`document.hidden === true` über
+mehrere frische Server-Neustarts) – Änderung nutzt exakt dieselben Werte, die für das
+Filter-Panel bereits live verifiziert wurden, daher hohe Zuversicht trotz fehlendem Screenshot.
+
 ## [2026-07-09] Zoom sperren, Filter-Zeile auf iPhone, Auto-Search-Position, Copy-Button kompakt
 
 Vier unabhängige UI-Fixes, alle auf Nutzerwunsch.

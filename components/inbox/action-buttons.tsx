@@ -91,7 +91,7 @@ export function ActionButtons({
               </Button>
             }
           />
-          <PopoverContent className="w-64" align="end">
+          <PopoverContent className="w-64 rounded-[12px] p-4" align="end">
             <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
               Grund für Ablehnung
             </p>

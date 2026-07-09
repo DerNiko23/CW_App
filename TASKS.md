@@ -124,6 +124,9 @@
   Viewport-Meta + Style-Berechnungen im DOM bestätigt; voller Screenshot-Check diese Runde durch
   einen Preview-Tool-Fokus-Zustand (Tab nicht im Vordergrund) blockiert, nicht durch einen
   Code-Fehler (Details in CHANGELOG) – sollte nach Tool-Neustart nachgeholt werden.
+- [x] Ablehnen-Grund-Dropdown auf dasselbe Panel-Design wie die Filter umgestellt
+  (`rounded-[12px] p-4`, identische Werte wie `filter-bar.tsx`). Build/Lint grün; visuelle
+  Bestätigung durch denselben Preview-Tool-Fokus-Zustand blockiert wie im Eintrag darüber.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt
