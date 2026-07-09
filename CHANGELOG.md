@@ -1,5 +1,54 @@
 # CHANGELOG
 
+## [2026-07-10] YouTube-Transkript-Blocking gelöst: Webshare-Residential-Proxy
+
+Die seit 2026-07-08 dokumentierte Einschränkung ("YouTube blockiert Transkript-Abrufe von
+Cloud-Servern", 18/18 Fehlschläge auf Vercel) ist gelöst. Nutzer hat Zugangsdaten für einen
+rotierenden Webshare-Residential-Proxy bereitgestellt.
+
+**Umsetzung:**
+- 4 neue Env-Vars (`PROXY_HOST`, `PROXY_PORT`, `PROXY_USERNAME`, `PROXY_PASSWORD`) in
+  `.env.local` sowie in Vercel Production **und** Preview angelegt (`vercel env add`).
+- `lib/pipeline/transcript.ts`: neuer `createProxyFetch()`-Singleton, baut einmal pro warmem
+  Serverless-Container einen `undici.ProxyAgent` und reicht ihn als `config.fetch`-Override an
+  `YoutubeTranscript.fetchTranscript` durch (deckt InnerTube-API, Watch-Page-Scraping und den
+  Transcript-XML-Abruf gleichermaßen ab, da alle drei intern denselben Override nutzen). Ohne
+  gesetzte `PROXY_*`-Vars automatischer Fallback auf direkten `fetch` – kein Hard-Requirement.
+  `withRetries`/die Retry-Konstanten selbst unverändert gelassen wie vom Nutzer gefordert.
+- Beide Catch-Blöcke in `fetchTranscriptOnce` loggen jetzt `error.name`/`error.message` statt
+  komplett stumm zu `null` zu werden (landet in Vercel-Function-Logs) – nötig, um bei
+  Fehlschlägen den exakten Fehler zu berichten statt zu raten.
+- `undici` als explizite Dependency ergänzt (`package.json`, vorher nur transitiv über Next.js).
+
+**Verifikation (mehrstufig, alles live getestet statt angenommen):**
+1. Lokal: `npm run pipeline:test` mit den 4 zuvor blockierten Video-IDs – IP-Rotation direkt
+   gemessen (unterschiedliche Egress-IP pro Proxy-Request, klar getrennt von der lokalen IP),
+   alle 4 erfolgreich.
+2. Vercel-Preview-Deploy (`vercel deploy`) + Live-Test der 4 Video-IDs gegen die echte
+   Preview-Infrastruktur (per Server-Session-Cookie + Vercels "Protection Bypass for
+   Automation", nach Rücksprache mit dem Nutzer aktiviert und danach wieder deaktiviert):
+   zunächst 2/4 erfolgreich (`status: processed`), 2/4 mit einem *neuen* Fehler
+   (`YoutubeTranscriptVideoUnavailableError`, aus den Vercel-Function-Logs) – nicht mehr die
+   alte stille IP-Blockade. Diagnose: einzelne Proxy-IPs aus dem rotierenden Pool laufen bei
+   YouTube vermutlich auf eine Consent-/Zwischenseite ohne `playabilityStatus` statt der echten
+   Watch-Page; da jeder Retry-Versuch eine neu rotierte IP zieht, direkt behebbar über mehr
+   Versuche.
+3. `TRANSCRIPT_FETCH_ATTEMPTS` von 3 auf 5 erhöht (mehr Retry-Versuche = mehr rotierte IPs =
+   höhere Trefferchance), erneut deployed. Nutzer hat danach selbst im Browser gegen die
+   Preview getestet (eigenes Vercel-Team-Login, kein Bypass-Secret nötig): **alle 4 Test-Videos
+   erfolgreich.**
+4. Preview-only Nebenbaustelle entdeckt und behoben: `AUTH_PASSWORD` war für die
+   Preview-Umgebung leer (nur Production hatte einen echten Wert) – dadurch hätte die
+   App-eigene Passwort-Middleware *jeden* Request auf Preview blockiert, unabhängig vom
+   Proxy-Fix. Nach Rücksprache mit dem Nutzer einen Testwert nur für Preview gesetzt;
+   Production unverändert.
+
+**Kosten-Notiz für Skalierung:** Webshare-Residential-Proxy ist bandbreitenbasiert abgerechnet.
+Transkript-Text ist pro Video klein, daher pro Import vernachlässigbar – bei deutlich höherem
+Volumen lohnt sich ein Blick auf den tatsächlichen Verbrauch im Webshare-Dashboard.
+
+`npm run lint`/`npm run build`/`npm test` (45/45) sauber.
+
 ## [2026-07-09] Ablehnen-Dropdown im Filter-Panel-Design
 
 Das Grund-für-Ablehnung-Menü (`components/inbox/action-buttons.tsx`, `PopoverContent`) nutzte noch

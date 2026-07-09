@@ -110,33 +110,37 @@ MASTERPLAN §5: Formular auf der Inbox, ruft `/api/pipeline/import` auf (volle P
 eine einzelne URL, Backend aus Phase 1). Erfolg → Redirect zur Detailseite, Skip/Fehler →
 Inline-Meldung.
 
-### Bekannte Einschränkung: YouTube blockiert Transkript-Abrufe von Cloud-Servern
+### Gelöst: YouTube-IP-Blocking über Residential-Proxy (Webshare)
 
-**Ursache:** `fetchTranscript` (`lib/pipeline/transcript.ts`) holt Transkripte über die
-inoffizielle YouTube-Route (InnerTube-API/Watch-Page-Scraping, kein API-Key) – dieselbe
-Route, die `youtube-transcript` und vergleichbare Bibliotheken nutzen. YouTube blockt/drosselt
-diese Route erfahrungsgemäß IP-basiert gegen Cloud-/Serverless-Hosts, nicht nur gegen Vercel –
-das betrifft praktisch jeden Hosting-Anbieter, der über Rechenzentrums-IP-Ranges läuft.
-Live verifiziert (2026-07-08): **18 von 18** Video-IDs mit nachweislich vorhandenem Transkript
-scheitern auf Vercel mit `no_transcript`, dieselben IDs funktionieren lokal 18 von 18. Ein
-Retry-Versuch (3 Anläufe mit Delay) wurde getestet und hilft nicht – die Laufzeit verlängert
-sich, das Ergebnis bleibt gleich, was eher für hartes IP-Blocking als für weiches
-Rate-Limiting spricht. Details in CHANGELOG.md (Einträge vom 2026-07-08).
+**Ursache (Diagnose 2026-07-08):** `fetchTranscript` (`lib/pipeline/transcript.ts`) holt
+Transkripte über die inoffizielle YouTube-Route (InnerTube-API/Watch-Page-Scraping, kein
+API-Key) – dieselbe Route, die `youtube-transcript` und vergleichbare Bibliotheken nutzen.
+YouTube blockt/drosselt diese Route IP-basiert gegen Cloud-/Serverless-Hosts. Live verifiziert:
+**18 von 18** Video-IDs mit nachweislich vorhandenem Transkript scheiterten auf Vercel mit
+`no_transcript`, dieselben IDs funktionierten lokal 18 von 18. Ein reiner Retry (ohne
+IP-Wechsel) half nachweislich nicht.
 
-**Was funktioniert:** Alle 18 kuratierten Demo-Videos (Score, Annehmen/Ablehnen/Erledigt,
-Reaktions-Baukasten, Export, Adaptive Ranking) sind bereits importiert und laufen unabhängig
-von diesem Bug – betroffen ist ausschließlich das Hinzufügen *neuer* YouTube-Videos in
-Produktion, sowohl über Auto-Search als auch über den manuellen URL-Import (beide nutzen
-denselben `fetchTranscript`-Code-Pfad). Die App kommuniziert das ehrlich statt eines stillen
-Fails oder einer generischen Fehlermeldung ("YouTube blockiert Transkript-Abrufe von diesem
-Server …", siehe `auto-search-button.tsx`/`url-import-form.tsx`).
+**Fix (2026-07-10):** Alle drei HTTP-Aufrufe der `youtube-transcript`-Bibliothek (InnerTube-API,
+Watch-Page-Scraping, Transcript-XML) laufen jetzt optional über einen rotierenden
+Webshare-Residential-Proxy (`createProxyFetch()` in `lib/pipeline/transcript.ts`, via
+`config.fetch`-Override und `undici.ProxyAgent`). Aktiv nur, wenn alle vier `PROXY_*`-Env-Vars
+gesetzt sind – fehlen sie, fällt der Code automatisch auf direkten `fetch` zurück (kein
+Hard-Requirement, kein Risiko eines Totalausfalls bei Proxy-Problemen).
 
-**Optionen und Entscheidung:** Ein Proxy-/Residential-IP-Dienst (z. B. ScraperAPI) würde das
-vermutlich zuverlässig lösen, bedeutet aber laufende Kosten. Dagegen entschieden: kein
-laufender Kosten-Posten vor der Einreichung rechtfertigbar für ein Bewerbungsprojekt, und die
-18 kuratierten Demo-Videos decken die Kernfunktionalität bereits vollständig ab – exakt
-dieselbe Abwägung wie bei den TikTok/Instagram-Grenzen (MASTERPLAN §5): ehrlich benennen statt
-verstecken, statt eine laufende Kostenstelle für ein Nice-to-have einzugehen.
+**Live-Verifikation:** IP-Rotation direkt gemessen (unterschiedliche Egress-IP pro Proxy-Request,
+klar getrennt von der lokalen IP). Auf echter Vercel-Preview-Infrastruktur liefen zunächst 2 von
+4 zuvor blockierten Test-Videos erfolgreich durch; die anderen 2 scheiterten mit einem neuen,
+anderen Fehler (`YoutubeTranscriptVideoUnavailableError` statt der alten stillen
+`no_transcript`-Blockade) – Ursache vermutlich vereinzelte Proxy-IPs, die bei YouTube auf eine
+Consent-/Zwischenseite statt der echten Watch-Page laufen. Da jeder Retry-Versuch eine neu
+rotierte IP zieht, wurde `TRANSCRIPT_FETCH_ATTEMPTS` von 3 auf 5 erhöht; danach liefen alle 4
+Test-Videos (`iT9uu0YVhCg`, `DCKs4alpky0`, `clzhwqRZcow`, `raAGwC5u57s`) auf der Vercel-Preview
+erfolgreich durch.
+
+**Laufende Kosten (Notiz für Skalierung):** Webshare-Residential-Proxy ist bandbreitenbasiert
+abgerechnet. Transkript-Text ist pro Video klein (wenige KB), daher pro Import vernachlässigbar –
+bei deutlich höherem Volumen (z. B. sehr viele Auto-Search-Läufe pro Tag) lohnt sich ein Blick auf
+den tatsächlichen Verbrauch im Webshare-Dashboard, bevor der Plan hochskaliert wird.
 
 ## Prinzipien
 - **"Würde Chris das morgen früh tatsächlich benutzen?"** – sonst streichen.

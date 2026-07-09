@@ -81,6 +81,7 @@
   Einschränkung dokumentiert (README.md), kein Proxy-Dienst vor der Einreichung (keine
   laufenden Kosten rechtfertigbar). Ehrliche In-App-Fehlermeldungen statt "Keine neuen Treffer"/
   "Kein Transkript verfügbar" ergänzt. Details in CHANGELOG.
+  **Update 2026-07-10: Nutzer hat Proxy-Zugangsdaten bereitgestellt, gelöst – siehe Eintrag unten.**
 - [x] **Produktions-Inbox bereinigt**: Audit fand 104 Videos statt der erwarteten ~13-16
   (Feature-Test-Artefakte aus mehreren Sessions). Ein Confidence-Regelverstoß (50% in
   "Erledigt") und 5 heutige Test-Klick-Artefakte korrigiert. Sichtbar jetzt 18 Videos (10 Neu +
@@ -127,6 +128,14 @@
 - [x] Ablehnen-Grund-Dropdown auf dasselbe Panel-Design wie die Filter umgestellt
   (`rounded-[12px] p-4`, identische Werte wie `filter-bar.tsx`). Build/Lint grün; visuelle
   Bestätigung durch denselben Preview-Tool-Fokus-Zustand blockiert wie im Eintrag darüber.
+- [x] **YouTube-Transkript-IP-Blocking gelöst** – Requests laufen jetzt optional über einen
+  rotierenden Webshare-Residential-Proxy (`PROXY_*`-Env-Vars, `createProxyFetch()` in
+  `lib/pipeline/transcript.ts`), Fallback auf direkten `fetch` falls nicht konfiguriert.
+  Mehrstufig live verifiziert: IP-Rotation gemessen, Vercel-Preview-Test zunächst 2/4 (neuer
+  Fehler `YoutubeTranscriptVideoUnavailableError` bei vereinzelten Proxy-IPs), nach Erhöhung von
+  `TRANSCRIPT_FETCH_ATTEMPTS` 3→5 dann 4/4 (vom Nutzer selbst im Browser gegen die Preview
+  bestätigt). Nebenbei entdeckt+behoben: `AUTH_PASSWORD` war für die Preview-Umgebung leer
+  (Production unverändert, echtes Passwort). Details in CHANGELOG.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt
