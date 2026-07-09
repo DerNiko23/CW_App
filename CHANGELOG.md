@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## [2026-07-09] Zoom sperren, Filter-Zeile auf iPhone, Auto-Search-Position, Copy-Button kompakt
+
+Vier unabhängige UI-Fixes, alle auf Nutzerwunsch.
+
+**Zoom app-weit deaktiviert** (`app/layout.tsx`, neuer `viewport`-Export mit `maximumScale: 1,
+userScalable: false`). Anders als beim vorherigen iOS-Input-Zoom-Fix (der nur den `text-sm`-
+Auslöser auf den zwei Text-Inputs behoben hat) jetzt explizit für die ganze App angefragt – Login,
+Inbox, Video-Detailseite betrifft dieselbe eine Viewport-Meta-Stelle. Bewusster Trade-off
+festgehalten: das weicht von WCAG 1.4.4 (Zoom bis 200 %) ab, ist aber eine explizite
+Produktentscheidung des einzigen Stakeholders für ein Ein-Personen-Tool, keine übersehene
+Regression.
+
+**Filter brachen auf dem iPhone um** ("Score" rutschte in eine zweite Zeile) – Filter-Trigger-
+Buttons (`components/inbox/filter-bar.tsx`) enger gemacht (`gap-1.5`→`gap-1`, `px-2` statt
+geerbtem `px-2.5`), damit alle vier Chips auf iPhone-Breite (~375–430px) in einer Zeile bleiben.
+
+**Auto-Search-Button jetzt robust rechtsbündig** (`components/inbox/auto-search-button.tsx`,
+`ml-auto`) – bisher konnte er bei einem Zeilenumbruch der Filter-Reihe auf die linke Seite
+rutschen (Folge des Umbruch-Bugs oben: ein alleinstehendes Flex-Item auf einer eigenen Zeile
+ignoriert `justify-between` des Elternelements). `ml-auto` hält ihn unabhängig vom Umbruch-
+verhalten am rechten Rand.
+
+**Copy-Button im Reaktions-Baukasten verkleinert** (`components/inbox/copy-button.tsx`): Text
+"Kopieren"/"Kopiert" entfernt, nur noch Icon in einem kompakten `size-6`-Kreis (vorher Pill mit
+Text) – mehr Platz für den Vorschlagstext daneben. `aria-label`/`title` ergänzt, da ein Button
+ohne sichtbaren Text sonst keinen zugänglichen Namen für Screenreader hätte. Wirkt einheitlich auf
+alle Verwendungsstellen (Hooks, Kernargument, Quellen, Analogie, CTA, gesamtes Skript).
+
+**Verifikation diesmal eingeschränkt:** `npm run lint`/`npm run build` sauber, Server-Log zeigt
+einen einzelnen sauberen `GET / 200`. Die Viewport-Meta wurde direkt im DOM bestätigt
+(`document.querySelector('meta[name="viewport"]')` → korrekt `width=device-width, initial-scale=1,
+maximum-scale=1, user-scalable=no`), ebenso einzelne Style-Berechnungen (Farbe/Schriftgröße/
+Text-Shadow des Titels). Ein vollständiger Screenshot-/Geometrie-Check (Filter-Zeile/Auto-Search-
+Position visuell bestätigen) war diese Runde nicht möglich: `getBoundingClientRect()` lieferte
+über mehrere frische Server-Neustarts hinweg konsequent Nullen, root-caused auf
+`document.visibilityState === "hidden"` / `document.hasFocus() === false` (das Preview-Tab war im
+Test-Harness nicht im Vordergrund - Browser geben Hintergrund-Tabs kein Layout-Budget). Kein
+Hinweis auf einen Code-Fehler, sondern ein Fokus-Zustand des Preview-Tools in dieser Session.
+Sollte nach einem Neustart des Preview-Tools (Tab im Vordergrund) erneut geprüft werden.
+
 ## [2026-07-09] Flow-Field: 3 Bugfixes (Fade-in, Mobile-Scroll-Reload, iOS-Zoom)
 
 Drei konkrete, vom Nutzer live auf dem Handy gefundene Bugs behoben.

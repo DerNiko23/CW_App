@@ -68,9 +68,9 @@ function FilterGroup({
           <Button
             variant="outline"
             className={cn(
-              "gap-1.5 border-white/40 bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-md hover:bg-white/30",
+              "gap-1 border-white/40 bg-white/20 px-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-md hover:bg-white/30",
               open
-                ? "border-2 border-accent px-[9px]"
+                ? "border-2 border-accent px-[7px]"
                 : isActive && "border-accent/40 text-accent",
             )}
           >

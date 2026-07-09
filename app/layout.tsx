@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -21,6 +21,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Faktencheck-Inbox",
   description: "Discovery-Pipeline fuer Falschinformations-Videos.",
+};
+
+// Ein-Personen-Tool, Nutzerwunsch: Zoom (Pinch + iOS-Auto-Zoom-bei-Input-Fokus) app-weit
+// deaktiviert statt nur den Input-Zoom-Ausloeser zu entschaerfen.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

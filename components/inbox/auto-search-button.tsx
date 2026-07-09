@@ -95,7 +95,7 @@ export function AutoSearchButton() {
       variant="outline"
       onClick={handleClick}
       disabled={isSearching}
-      className="border-white/40 bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-md hover:bg-white/30"
+      className="ml-auto border-white/40 bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-md hover:bg-white/30"
     >
       {isSearching ? <Loader2 className="animate-spin" /> : <Search />}
       {isSearching ? `Suche läuft … ${foundCount}/${TARGET_FOUND} gefunden` : "Auto-Search"}

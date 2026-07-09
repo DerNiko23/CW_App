@@ -17,14 +17,15 @@ export function CopyButton({ text, className }: { text: string; className?: stri
     <button
       type="button"
       onClick={handleCopy}
+      aria-label={copied ? "Kopiert" : "Kopieren"}
+      title={copied ? "Kopiert" : "Kopieren"}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+        "inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
         copied && "border-success/40 bg-success/10 text-success",
         className,
       )}
     >
       {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-      {copied ? "Kopiert" : "Kopieren"}
     </button>
   );
 }
