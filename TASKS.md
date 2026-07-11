@@ -182,6 +182,20 @@
   interne Request trägt keinen Auth-Cookie und wurde vom `proxy.ts`-Passwortschutz auf `/login`
   umgeleitet, was Next.js als "kein gültiges Bild" quittierte. Live im Dev-Server getestet
   (Desktop-Doppelseite, Mobile-Einzelseite, Tastatur-Pfeile, Download-Link).
+- [x] **Auto-Search-Button blieb bei "0/5 gefunden" hängen** – Live-Diagnose (Rohdaten der
+  Streaming-Response direkt im Browser mitgeloggt) zeigte: lokal im Dev-Server liefert die
+  Streaming-Response tatsächlich inkrementell aus, auf Vercels Node-Serverless-Funktionen wird sie
+  aber vermutlich bis zum Ende der Funktion gepuffert (bekannte Plattform-Einschränkung ohne Edge
+  Runtime) – der Client sah dadurch alle Fortschritts-Events erst auf einmal am Ende. Fix: neuer
+  Endpunkt `GET /api/pipeline/auto-search/status?since=` pollt alle 1,5 s den tatsächlichen
+  DB-Stand (Claims mit Confidence ≥ 70 % seit Suchstart, `lib/pipeline/confidence.ts`) statt sich
+  auf die Streaming-Response zu verlassen – aktualisiert Zähler UND ruft `router.refresh()` auf,
+  sodass neu gefundene Videos während der Suche live in der Inbox erscheinen (keine neue
+  Job-State-Tabelle, nutzt `claims.created_at`). Streaming-Code bleibt als Bonus erhalten (falls
+  die Plattform doch inkrementell ausliefert). Live mit zwei echten Auto-Search-Läufen getestet:
+  Polling feuert zuverlässig alle 1,5 s, stoppt sauber bei Suchende, keine Konsolenfehler; der
+  Status-Endpunkt lieferte für das Zeitfenster des ersten Laufs korrekt 7 gefundene Videos (mit
+  den tatsächlich in der Inbox gelandeten Funden abgeglichen).
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Search } from "lucide-react";
@@ -13,15 +13,43 @@ type StreamEvent = DiscoveryProgressEvent | { type: "error"; error: string };
 // Muss mit STOP_AFTER_FOUND in app/api/pipeline/auto-search/route.ts übereinstimmen -
 // nur für die Fortschritts-Copy "x/5 gefunden", keine echte Limit-Logik hier.
 const TARGET_FOUND = 5;
+const POLL_INTERVAL_MS = 1500;
 
 export function AutoSearchButton() {
   const [isSearching, setIsSearching] = useState(false);
   const [foundCount, setFoundCount] = useState(0);
   const router = useRouter();
+  const lastPolledCountRef = useRef(0);
 
   async function handleClick() {
     setIsSearching(true);
     setFoundCount(0);
+    lastPolledCountRef.current = 0;
+    const startedAt = new Date().toISOString();
+
+    // Fallback fuer den Live-Fortschritt: der Streaming-Response weiter unten liefert lokal
+    // inkrementell aus, auf Vercels Node-Serverless-Funktionen wird die Antwort aber teils bis zum
+    // Ende gepuffert (live beobachtet - Button blieb bei "0/5", obwohl Videos gefunden wurden).
+    // Statt uns auf Streaming zu verlassen, pollen wir parallel den tatsächlichen DB-Stand
+    // (/api/pipeline/auto-search/status) und aktualisieren die Inbox live, sobald sich der Zähler
+    // ändert - funktioniert unabhängig davon, ob die Streaming-Response ankommt.
+    const pollTimer = window.setInterval(async () => {
+      try {
+        const statusRes = await fetch(
+          `/api/pipeline/auto-search/status?since=${encodeURIComponent(startedAt)}`,
+        );
+        if (!statusRes.ok) return;
+        const { foundCount: polledCount } = (await statusRes.json()) as { foundCount: number };
+        if (polledCount > lastPolledCountRef.current) {
+          lastPolledCountRef.current = polledCount;
+          setFoundCount((prev) => Math.max(prev, polledCount));
+          router.refresh();
+        }
+      } catch {
+        // Polling ist nur ein Fortschritts-Hinweis - ein einzelner Fehlschlag ist egal,
+        // der naechste Tick versucht es erneut.
+      }
+    }, POLL_INTERVAL_MS);
 
     try {
       const res = await fetch("/api/pipeline/auto-search", { method: "POST" });
@@ -47,7 +75,7 @@ export function AutoSearchButton() {
           const event = JSON.parse(line) as StreamEvent;
           if (event.type === "candidate") {
             lastFoundCount = event.foundCount;
-            setFoundCount(event.foundCount);
+            setFoundCount((prev) => Math.max(prev, event.foundCount));
           } else if (event.type === "done") {
             doneEvent = event;
           } else if (event.type === "error") {
@@ -86,6 +114,7 @@ export function AutoSearchButton() {
     } catch (err) {
       toast.error(`Suche fehlgeschlagen: ${truncateMessage((err as Error).message)}`);
     } finally {
+      window.clearInterval(pollTimer);
       setIsSearching(false);
     }
   }

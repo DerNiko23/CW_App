@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## [2026-07-11] Auto-Search-Fortschritt: Polling statt alleiniger Streaming-Response
+
+Nutzer meldete: Auto-Search findet Videos, der Button zeigt aber die ganze Zeit "0/5 gefunden"
+statt live zu aktualisieren.
+
+**Root Cause (live diagnostiziert):** Die bestehende Implementierung liest die Antwort von
+`POST /api/pipeline/auto-search` als `ReadableStream` und aktualisiert den Zähler pro
+`"candidate"`-Event. Direkter Test im Browser (Rohdaten der Stream-Chunks inkl. Zeitstempel
+mitgeloggt) zeigt: lokal im Dev-Server kommen die Chunks tatsächlich inkrementell an (erster
+Kandidat nach 21 s, "processed" nach 44 s/68 s). Vercels Node-Serverless-Funktionen puffern
+Responses aber bekanntermaßen bis zum Ende der Funktionsausführung, sofern keine Edge Runtime
+verwendet wird – auf der Live-Seite käme dadurch der gesamte Stream erst nach 1-3 Minuten auf
+einmal an, sodass der Zähler bis dahin bei 0 hängen bleibt und dann sofort auf den Endstand
+springt. Das erklärt exakt das gemeldete Verhalten.
+
+**Fix:** Neuer Endpunkt `GET /api/pipeline/auto-search/status?since=<ISO-Timestamp>`
+(`app/api/pipeline/auto-search/status/route.ts`) zählt Claims mit `confidence >=
+CONFIDENCE_THRESHOLD` (`lib/pipeline/confidence.ts`, exakt dieselbe Schwelle wie `foundCount` in
+`runDiscovery()`), erstellt seit Suchstart, gruppiert nach `video_id` – das ist unabhängig von der
+Streaming-Response, weil `processVideo()` (`lib/pipeline/process.ts`) jedes gefundene Video sofort
+in die DB schreibt, nicht erst am Ende des Laufs. `components/inbox/auto-search-button.tsx` pollt
+diesen Endpunkt alle 1,5 s parallel zur laufenden Suche, aktualisiert den Zähler und ruft bei jeder
+Erhöhung `router.refresh()` auf – neu gefundene Videos erscheinen dadurch live in der Inbox, ohne
+auf das Ende der Suche zu warten. Keine neue Job-State-Tabelle nötig (bewusste Entscheidung schon
+beim ursprünglichen Streaming-Design, siehe Kommentar in `discovery.ts`) – die bestehende
+`claims.created_at`-Spalte reicht. Die Streaming-Response bleibt zusätzlich bestehen (aktualisiert
+den Zähler weiterhin, falls die Plattform doch inkrementell ausliefert, und liefert die
+Abschluss-Zusammenfassung für den finalen Toast).
+
+**Live verifiziert:** zwei echte Auto-Search-Läufe (echte YouTube-/Claude-Aufrufe). Lauf 1 fand
+7 Videos (heute sichtbar in der Inbox, u. a. mehrere Grapefruit-Funde). Der neue Status-Endpunkt
+lieferte für dessen Zeitfenster korrekt `{"foundCount":7}` zurück – gegen die tatsächlich gelandeten
+Inbox-Einträge abgeglichen. Lauf 2 (zur UI-Verifikation) fand 0 neue Treffer (alle Kandidaten
+`no_transcript`/`off_topic`-Skips, ein echtes Ergebnis, kein Bug); dabei live beobachtet, dass das
+Polling zuverlässig alle 1,5 s feuert und beim Suchende sauber stoppt (kein hängender Interval,
+keine Konsolenfehler). `npm run build`/`npm run lint` sauber.
+
 ## [2026-07-11] E-Book-Seite mit Blätterfunktion
 
 Nutzer wollte sein E-Book ("Heißhunger", PDF) direkt aus der App erreichbar machen – ein Button
