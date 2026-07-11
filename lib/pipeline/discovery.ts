@@ -68,6 +68,21 @@ async function filterUnseenVideoIds(
   return videoIds.filter((id) => !seen.has(id));
 }
 
+// Als eigene, reine Funktion extrahiert (statt inline in runDiscovery), damit dieser Pfad ohne
+// Netzwerk-/DB-Mocks direkt getestet werden kann - siehe discovery.test.ts. Ein gewolltes Ende
+// (Ziel erreicht, Sicherheitsnetz gegriffen, oder alle Kandidaten ohne vorzeitigen Abbruch
+// durchgelaufen) hat immer Vorrang vor `timeUp`, selbst wenn die Deadline zufaellig im selben
+// Moment auch ueberschritten wurde - sonst haengt der Client unnoetig einen Folge-Request an
+// (echter Bug einer frueheren Fassung: `timeUp` wurde zuerst geprueft und hat den Rest der
+// Bedingungen gar nicht mehr ausgewertet).
+export function computeTimedOut(params: {
+  timeUp: boolean;
+  otherStopReached: boolean;
+  allCandidatesChecked: boolean;
+}): boolean {
+  return params.timeUp && !(params.otherStopReached || params.allCandidatesChecked);
+}
+
 export async function runDiscovery(params: {
   supabase: SupabaseClient;
   youtubeApiKey: string;
@@ -117,10 +132,7 @@ export async function runDiscovery(params: {
   const allFoundIds: string[] = [];
 
   for (const query of queries.slice(0, searchLimit)) {
-    if (timeUp()) {
-      summary.timedOut = true;
-      break;
-    }
+    if (timeUp()) break;
     const videoIds = await searchVideoIds(query, youtubeApiKey, maxResultsPerQuery);
     await addQuotaUsage(supabase, YOUTUBE_SEARCH_COST);
     summary.searchesPerformed += 1;
@@ -136,18 +148,33 @@ export async function runDiscovery(params: {
   let checkedCount = 0;
   let foundCount = 0;
 
-  function targetReached(): boolean {
-    if (timeUp()) {
-      summary.timedOut = true;
-      return true;
-    }
+  // Ziel erreicht / Kosten-Sicherheitsnetz gegriffen - unabhaengig von der Zeit. Bewusst getrennt
+  // von der Zeit-Pruefung (siehe targetReached()): beide werden am Ende UNABHAENGIG voneinander
+  // aus dem finalen checkedCount/foundCount neu berechnet (computeTimedOut), damit ein
+  // zeitgleiches Erreichen beider Bedingungen nicht dazu fuehrt, dass die zuerst ausgewertete
+  // das Ergebnis verfaelscht.
+  function otherStopReached(): boolean {
     return (
       (stopAfterFoundCount !== undefined && foundCount >= stopAfterFoundCount) ||
       (maxCandidatesProcessed !== undefined && checkedCount >= maxCandidatesProcessed)
     );
   }
 
-  for (let i = 0; i < newIds.length && !targetReached(); i += VIDEOS_LIST_BATCH_SIZE) {
+  function targetReached(): boolean {
+    return otherStopReached() || timeUp();
+  }
+
+  // true, wenn eine der beiden Schleifen unten ueber targetReached() vorzeitig verlassen wurde -
+  // bewusst nicht aus `checkedCount`/`newIds.length` abgeleitet: `getVideoDetails` kann pro Batch
+  // weniger Details liefern als angefragt (z. B. bei zwischenzeitlich geloeschten Videos), dann
+  // haette `checkedCount` eine Luecke und wuerde faelschlich wie unvollstaendige Arbeit aussehen.
+  let brokeEarly = false;
+
+  candidateLoop: for (let i = 0; i < newIds.length; i += VIDEOS_LIST_BATCH_SIZE) {
+    if (targetReached()) {
+      brokeEarly = true;
+      break;
+    }
     const batch = newIds.slice(i, i + VIDEOS_LIST_BATCH_SIZE);
     const details = await getVideoDetails(batch, youtubeApiKey);
     await addQuotaUsage(supabase, YOUTUBE_VIDEOS_LIST_COST);
@@ -161,16 +188,18 @@ export async function runDiscovery(params: {
       }
       onProgress?.({ type: "candidate", externalId: metadata.externalId, result, foundCount, checkedCount });
 
-      if (targetReached()) break;
+      if (targetReached()) {
+        brokeEarly = true;
+        break candidateLoop;
+      }
     }
   }
 
-  // timedOut ist nur relevant, wenn das Ziel nicht ohnehin erreicht wurde - sonst wuerde der
-  // Client nach einem Lauf, der zufaellig genau an der Zeitgrenze fertig wurde, unnoetig einen
-  // Folge-Request anhaengen.
-  if (stopAfterFoundCount !== undefined && foundCount >= stopAfterFoundCount) {
-    summary.timedOut = false;
-  }
+  summary.timedOut = computeTimedOut({
+    timeUp: timeUp(),
+    allCandidatesChecked: !brokeEarly,
+    otherStopReached: otherStopReached(),
+  });
 
   summary.quotaUsedToday = await getQuotaUsedToday(supabase);
   onProgress?.({ type: "done", summary, foundCount, checkedCount });

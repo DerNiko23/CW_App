@@ -1,5 +1,68 @@
 # CHANGELOG
 
+## [2026-07-11] Auto-Search-Verkettung: echter Test statt nur Code-Review, dabei realen Bug gefunden
+
+Nutzer, zu Recht: "dieser Pfad ist zu fehleranfällig, um ihn ungetestet zu lassen" - wollte den
+Timeout/Verkettungs-Mechanismus aus dem vorherigen Fix (siehe Eintrag direkt unten) live
+beobachtet sehen, nicht nur per Code-Review + bestehenden Unit-Tests für plausibel gehalten.
+
+**Versuch 1 (verworfen):** Deadline testweise auf 8s verkürzt, um den Timeout-Pfad deterministisch
+und schnell auszulösen. Ergebnis: die echte YouTube-Tagesquota (10.000 Units/Tag,
+`search.list` = 100 Units, siehe CLAUDE.md) war durch die vorherigen echten Testläufe bereits
+komplett aufgebraucht (`429 RESOURCE_EXHAUSTED`) - keine weiteren echten Suchen mehr möglich, bis
+Google die Quota zurücksetzt. Versuch, das über die Vercel-CLI direkt am Live-Deployment zu
+umgehen/verifizieren, ebenfalls nicht zielführend (Runtime-Logs dort nur live/kurzfristig
+abrufbar); das Pullen der Produktions-Secrets zur Reproduktion wurde vom Auto-Mode-Classifier
+korrekt blockiert (nicht vom Nutzer angefragt). Deadline-Änderung sofort zurückgesetzt.
+
+**Mit dem Nutzer abgestimmt:** dauerhafter automatisierter Test mit gemockten Abhängigkeiten
+statt Warten auf Quota-Reset oder einem einmaligen Mock-Stub.
+
+**Dabei einen echten Bug in der eigenen Fix-Logik gefunden** (bevor er in Produktion aufgefallen
+wäre): `targetReached()` prüfte `timeUp()` zuerst und gab bei `true` sofort zurück, ohne die
+anderen Bedingungen (`stopAfterFoundCount`, `maxCandidatesProcessed`) noch auszuwerten. Bei einem
+zeitgleichen Erreichen von z. B. `maxCandidatesProcessed` UND der Deadline hätte das fälschlich
+`summary.timedOut = true` ergeben und eine unnötige Verkettung ausgelöst, obwohl das
+Kosten-Sicherheitsnetz eigentlich sauber gegriffen hatte.
+
+**Fix (`lib/pipeline/discovery.ts`):**
+- `targetReached()` in zwei unabhängige Prüfungen aufgeteilt: `otherStopReached()` (Ziel/
+  Sicherheitsnetz, ohne Zeitbezug) und `timeUp()`. `summary.timedOut` wird jetzt EINMALIG am Ende
+  aus dem finalen Zustand berechnet (neue reine Funktion `computeTimedOut`), nicht mehr
+  während der Schleife per Kurzschluss-Auswertung gesetzt.
+- "Alle Kandidaten durchgelaufen" wird über ein explizites `brokeEarly`-Flag erkannt (gesetzt nur
+  an den tatsächlichen `break`-Stellen), nicht über `checkedCount >= newIds.length`:
+  `getVideoDetails` kann pro Batch weniger Details liefern als angefragt (z. B. bei
+  zwischenzeitlich gelöschten Videos), wodurch `checkedCount` eine Lücke bekommen und
+  fälschlich wie unvollständige Arbeit aussehen könnte.
+
+**Testbarkeit ohne Netzwerk-Mocks:** statt `runDiscovery()` komplett zu mocken (Node's
+`mock.module()` ist noch experimentell, keine Präzedenz im Projekt), die eigentliche
+Entscheidungslogik in reine, netzwerkfreie Funktionen extrahiert:
+- `computeTimedOut` (discovery.ts) - 6 neue Tests, u. a. der oben beschriebene Kollisions-Fall.
+- `shouldChainNextAttempt` + `runChainedSearch` (neu: `lib/pipeline/autoSearchChain.ts`) - die
+  komplette Ablaufsteuerung des Auto-Search-Buttons (Verkettung, Fehlerklassifizierung
+  `serverError`/`networkError`/`incomplete`, MAX_ATTEMPTS-Deckel) aus
+  `auto-search-button.tsx` herausgezogen, damit sie ohne React-Test-Harness lauffähig ist. 12
+  neue Tests, u. a. eine ECHTE (nicht angenommene) Nebenläufigkeitsmessung: `runAttempt` wird nie
+  überlappend aufgerufen (sequentielles `await`, kein `Promise.all`), ein Timeout löst genau
+  einen Folge-Request aus (nicht mehr), MAX_ATTEMPTS deckelt eine Dauerschleife aus wiederholten
+  Timeouts, ein `serverError` (z. B. Quota-Überschreitung) wird nie retried, bereits gefundene
+  Videos bleiben nach einem späten Fehler erhalten.
+- `components/inbox/auto-search-button.tsx` ruft jetzt `runChainedSearch` auf statt einer eigenen
+  inline `while`-Schleife - Produktionscode und Tests laufen durch denselben Pfad, kein Risiko,
+  dass der Test nur eine parallele, ungenutzte Implementierung absichert.
+
+**Live verifiziert (ohne weitere Quota zu verbrauchen):** ein echter Klick gegen die bereits
+quota-erschöpfte YouTube-API löste den neuen `serverError`-Pfad im echten Browser aus - Server-Log
+zeigt genau einen `POST /api/pipeline/auto-search` (kein automatischer Retry, wie beabsichtigt),
+Button kehrte korrekt in den Idle-Zustand ("Auto-Search") zurück. 63 Unit-Tests grün (18 neu),
+`npm run build`/`npm run lint` sauber.
+
+**Bekannte Konsequenz:** die YouTube-Suchquota für heute ist durch die Testläufe in dieser Session
+komplett aufgebraucht - keine echten Auto-Search-Ergebnisse mehr möglich, bis Google um Mitternacht
+Pacific Time zurücksetzt.
+
 ## [2026-07-11] Auto-Search: sauberer Selbst-Abbruch statt Vercel-Timeout-Risiko
 
 Nach dem Polling-Fix (siehe Eintrag direkt unten) meldete der Nutzer: "mal steht da 1/5 dann auch

@@ -7,9 +7,9 @@ import { Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { truncateMessage } from "@/lib/format";
 import type { DiscoveryProgressEvent } from "@/lib/pipeline/discovery";
+import { runChainedSearch, type AttemptOutcome } from "@/lib/pipeline/autoSearchChain";
 
 type StreamEvent = DiscoveryProgressEvent | { type: "error"; error: string };
-type DoneEvent = StreamEvent & { type: "done" };
 
 // Muss mit STOP_AFTER_FOUND in app/api/pipeline/auto-search/route.ts übereinstimmen -
 // nur für die Fortschritts-Copy "x/5 gefunden", keine echte Limit-Logik hier.
@@ -17,46 +17,58 @@ const TARGET_FOUND = 5;
 const POLL_INTERVAL_MS = 1500;
 // Jeder Request bricht serverseitig nach RUN_TIME_BUDGET_MS sauber ab (route.ts), statt eine
 // Vercel-Function-Zeitgrenze mitten in der Verarbeitung zu riskieren (dort kommt keine
-// verwertbare Antwort mehr an - siehe CHANGELOG 2026-07-11). Dieses Limit deckelt, wie oft der
-// Client automatisch einen Folge-Request anhängt, wenn das Ziel noch nicht erreicht ist -
-// Kosten-/Wartezeit-Sicherheitsnetz für die Verkettung selbst.
+// verwertbare Antwort mehr an - siehe CHANGELOG 2026-07-11). Dieses Limit deckelt, wie oft
+// runChainedSearch (lib/pipeline/autoSearchChain.ts) automatisch einen Folge-Request anhängt,
+// wenn das Ziel noch nicht erreicht ist - Kosten-/Wartezeit-Sicherheitsnetz für die Verkettung
+// selbst. Die eigentliche Verkettungs-Entscheidung + Ablaufsteuerung ist dort extrahiert und
+// eigenständig getestet (autoSearchChain.test.ts), damit dieser fehleranfällige Pfad nicht nur
+// per Code-Review, sondern durch echte Ausführung abgesichert ist.
 const MAX_ATTEMPTS = 5;
 
-type AttemptResult = { errorMessage: string | null; doneEvent: DoneEvent | null };
+async function runOneAttempt(onProgress: (foundCount: number) => void): Promise<AttemptOutcome> {
+  let res: Response;
+  try {
+    res = await fetch("/api/pipeline/auto-search", { method: "POST" });
+  } catch (err) {
+    return { kind: "networkError", message: (err as Error).message };
+  }
+  if (!res.body) return { kind: "networkError", message: "Keine Antwort vom Server erhalten." };
 
-async function runOneAttempt(onProgress: (foundCount: number) => void): Promise<AttemptResult> {
-  const res = await fetch("/api/pipeline/auto-search", { method: "POST" });
-  if (!res.body) throw new Error("Keine Antwort vom Server erhalten.");
+  try {
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let doneEvent: DoneEvent | null = null;
-  let errorMessage: string | null = null;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
 
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      const event = JSON.parse(line) as StreamEvent;
-      if (event.type === "candidate") {
-        onProgress(event.foundCount);
-      } else if (event.type === "done") {
-        doneEvent = event;
-        onProgress(event.foundCount);
-      } else if (event.type === "error") {
-        errorMessage = event.error;
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const event = JSON.parse(line) as StreamEvent;
+        if (event.type === "candidate") {
+          onProgress(event.foundCount);
+        } else if (event.type === "done") {
+          onProgress(event.foundCount);
+          return {
+            kind: "done",
+            summary: { ...event.summary, foundCount: event.foundCount },
+          };
+        } else if (event.type === "error") {
+          return { kind: "serverError", message: event.error };
+        }
       }
     }
+  } catch (err) {
+    return { kind: "networkError", message: (err as Error).message };
   }
 
-  return { errorMessage, doneEvent };
+  // Stream endete sauber, aber ohne "done"-Zeile - Verbindung vermutlich mitten drin abgebrochen.
+  return { kind: "incomplete" };
 }
 
 export function AutoSearchButton() {
@@ -65,8 +77,8 @@ export function AutoSearchButton() {
   const router = useRouter();
   const lastPolledCountRef = useRef(0);
   // Beste bekannte Zahl aus Streaming UND Polling zusammen - `foundCount` (State) hinkt dem
-  // synchronen Ablauf unten immer einen Render hinterher, für die Abbruch-/Toast-Entscheidung
-  // am Ende brauchen wir den aktuellen Wert sofort.
+  // synchronen Ablauf unten immer einen Render hinterher, für die Anzeige während der laufenden
+  // Verkettung brauchen wir den aktuellen Wert sofort.
   const bestKnownCountRef = useRef(0);
 
   function bumpFoundCount(count: number) {
@@ -106,43 +118,17 @@ export function AutoSearchButton() {
       }
     }, POLL_INTERVAL_MS);
 
-    let allResults: DoneEvent["summary"]["results"] = [];
-    let hardError: string | null = null;
-    let keepGoing = true;
-    let attempts = 0;
-
     try {
-      while (keepGoing && attempts < MAX_ATTEMPTS && bestKnownCountRef.current < TARGET_FOUND) {
-        attempts += 1;
-        try {
-          const { errorMessage, doneEvent } = await runOneAttempt(bumpFoundCount);
-          if (errorMessage) {
-            hardError = errorMessage;
-            keepGoing = false;
-          } else if (doneEvent) {
-            allResults = allResults.concat(doneEvent.summary.results);
-            const reachedTarget = doneEvent.foundCount >= TARGET_FOUND;
-            const nothingLeftToCheck = doneEvent.summary.videoIdsNew === 0;
-            // Nur bei einem Zeitlimit-Abbruch automatisch weitermachen - die anderen
-            // Stop-Gruende (Ziel erreicht, MAX_CANDIDATES/MAX_SEARCHES-Sicherheitsnetz) sollen
-            // wie bisher wirklich stoppen, sonst hebelt die Verkettung die Kostenbremse aus.
-            keepGoing = !reachedTarget && !nothingLeftToCheck && doneEvent.summary.timedOut;
-          } else {
-            // Stream endete ohne "done"-Zeile - Verbindung vermutlich mitten drin abgebrochen.
-            // Noch ein Versuch lohnt sich, bereits verarbeitete Kandidaten werden dabei
-            // uebersprungen (filterUnseenVideoIds), es wird also nichts doppelt bezahlt.
-          }
-        } catch (err) {
-          if (attempts >= MAX_ATTEMPTS) {
-            hardError = (err as Error).message;
-          }
-        }
-      }
+      const { allResults, hardError, bestKnownFoundCount } = await runChainedSearch({
+        targetFound: TARGET_FOUND,
+        maxAttempts: MAX_ATTEMPTS,
+        runAttempt: () => runOneAttempt(bumpFoundCount),
+      });
+      const finalCount = Math.max(bestKnownFoundCount, bestKnownCountRef.current);
 
-      if (allResults.length === 0 && bestKnownCountRef.current === 0 && hardError) {
+      if (allResults.length === 0 && finalCount === 0 && hardError) {
         toast.error(`Suche fehlgeschlagen: ${truncateMessage(hardError)}`);
       } else {
-        const finalCount = bestKnownCountRef.current;
         // Bekannte Einschraenkung (CHANGELOG 2026-07-08): YouTube blockiert die
         // Transkript-Route vermutlich IP-basiert von Cloud-Hosts aus - wenn wirklich
         // jeder geprüfte Kandidat daran scheitert, ist "Keine neuen Treffer" irreführend

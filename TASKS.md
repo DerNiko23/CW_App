@@ -214,6 +214,37 @@
   neuen Treffer" sagen. Alle 45 bestehenden Unit-Tests weiterhin grün, `npm run build`/
   `npm run lint` sauber. Live getestet: ein Lauf schloss nach 33,5s (unter der 40s-Grenze) sauber
   mit "done" ab, ohne unnötige Verkettung.
+- [x] **Auto-Search-Verkettung: echten Test statt nur Code-Review verlangt** – Nutzer wollte den
+  Timeout/Verkettungs-Pfad wirklich live beobachtet sehen, nicht nur gegengelesen ("dieser Pfad
+  ist zu fehleranfällig, um ihn ungetestet zu lassen"). Beim Versuch, das mit einer künstlich
+  verkürzten Deadline zu erzwingen, direkt die echte YouTube-Tagesquota (10.000 Units, 100
+  Suchen à 100 Units) durch die vorherigen Testläufe aufgebraucht vorgefunden – keine weiteren
+  echten Suchen mehr möglich. Nutzer hat sich für die dritte Option entschieden (dauerhafter
+  automatisierter Test statt Mock-Stub oder Warten auf Quota-Reset):
+  - Dabei durch genaues Nachdenken einen echten Bug in der eigenen Fix-Logik gefunden, bevor er
+    in Produktion hätte auffallen können: `timeUp()` wurde in `targetReached()` zuerst geprüft
+    und hat bei einem zeitgleichen Erreichen von `maxCandidatesProcessed` fälschlich `timedOut =
+    true` durchgereicht → hätte eine unnötige Verkettung ausgelöst, obwohl das
+    Sicherheitsnetz eigentlich sauber gegriffen hatte. `discovery.ts` umstrukturiert: die
+    "Ziel erreicht/Sicherheitsnetz/alle Kandidaten durchgelaufen"-Prüfung
+    (`otherStopReached`/`allCandidatesChecked`, aus einem expliziten `brokeEarly`-Flag statt aus
+    `checkedCount`/`newIds.length` abgeleitet, da `getVideoDetails` pro Batch weniger Details
+    liefern kann als angefragt) läuft jetzt immer VOLLSTÄNDIG und wird erst am Ende einmalig mit
+    der Zeit-Prüfung kombiniert (`computeTimedOut`), statt sich gegenseitig per Kurzschluss-Logik
+    zu verdecken.
+  - `computeTimedOut` (discovery.ts) und `shouldChainNextAttempt`/`runChainedSearch`
+    (neu: `lib/pipeline/autoSearchChain.ts`) als reine, netzwerkfreie Funktionen extrahiert und
+    mit 18 neuen Tests abgesichert (`discovery.test.ts`, `autoSearchChain.test.ts`) – u. a. wird
+    per echter (nicht simulierter) Nebenläufigkeitsmessung bewiesen, dass Folge-Requests niemals
+    überlappend laufen, dass genau ein Folge-Request bei Timeout ausgelöst wird, dass
+    MAX_ATTEMPTS eine Dauerschleife deckelt, und dass ein serverseitiger Fehler (z. B.
+    Quota-Überschreitung) nie retried wird. `auto-search-button.tsx` ruft jetzt `runChainedSearch`
+    auf statt einer eigenen inline while-Schleife – Produktionscode und Test decken denselben Pfad
+    ab.
+  - Live verifiziert (ohne weitere Quota zu verbrauchen): ein echter Klick gegen die
+    quota-erschöpfte YouTube-API löste den neuen `serverError`-Pfad aus – genau ein
+    `POST /api/pipeline/auto-search` in den Server-Logs (kein Retry), Button korrekt zurück auf
+    "Auto-Search" (Idle). 63 Unit-Tests grün, `npm run build`/`npm run lint` sauber.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt
