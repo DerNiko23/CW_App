@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## [2026-07-11] Auto-Search: sauberer Selbst-Abbruch statt Vercel-Timeout-Risiko
+
+Nach dem Polling-Fix (siehe Eintrag direkt unten) meldete der Nutzer: "mal steht da 1/5 dann auch
+kein Treffer und dann hört es auf" - der Zähler bewegt sich zwar jetzt, aber die Suche bricht
+manchmal mitten drin ab, ohne das Ziel zu erreichen, und die Erfolgsmeldung stimmte nicht mit dem
+zuletzt angezeigten Zähler überein.
+
+**Diagnose:** `POST /api/pipeline/auto-search` deklariert `maxDuration = 300`, ein echter Lauf
+kann aber (live gemessen, mehrfach) 80-150+ Sekunden dauern - mehrere Claude-Aufrufe plus bis zu
+5 Transkript-Proxy-Retries pro Kandidat, mal 20 Kandidaten. Versuche, das über die Vercel-CLI
+(`vercel logs`) direkt am Live-Deployment zu verifizieren, blieben uneindeutig (die
+Runtime-Logs sind dort nur live/kurzfristig abrufbar, kein zuverlässiges historisches Fenster für
+einen bereits abgeschlossenen Lauf) - das Pullen der Produktions-Secrets zur direkten
+Reproduktion wurde vom Auto-Mode-Classifier korrekt blockiert (nicht vom Nutzer angefragt).
+Stattdessen: robuste Lösung, die unabhängig von der genauen Plattform-Zeitgrenze funktioniert.
+
+**Fix:**
+- `runDiscovery()` (`lib/pipeline/discovery.ts`) bekommt einen optionalen `deadline`-Parameter
+  (Epoch-ms) und prüft ihn in beiden Schleifen (Suche + Kandidaten-Verarbeitung) - bei Überschreiten
+  bricht die Funktion selbst sauber ab (`summary.timedOut = true`, regulärer "done"-Event) statt
+  darauf zu hoffen, dass die Plattform den Request lange genug am Leben lässt.
+- `app/api/pipeline/auto-search/route.ts` setzt `RUN_TIME_BUDGET_MS = 40_000` als Deadline -
+  deutlich unter jeder plausiblen Serverless-Zeitgrenze, `maxDuration = 300` bleibt als äußere
+  Sicherheitsmarge bestehen.
+- `components/inbox/auto-search-button.tsx`: neue Verkettungs-Logik - bei `timedOut = true` UND
+  noch nicht erreichtem Ziel UND noch unverarbeiteten Kandidaten (`videoIdsNew > 0`) wird
+  automatisch ein Folge-Request abgeschickt (max. 5 insgesamt). Die anderen Stopp-Gründe (Ziel
+  erreicht, `MAX_CANDIDATES`/`MAX_SEARCHES`-Sicherheitsnetz) lösen bewusst **keine** Verkettung
+  aus - sonst würde das genau die Kosten-/Wartezeit-Bremse aushebeln, die diese Limits eigentlich
+  darstellen sollen. Bereits verarbeitete Kandidaten werden bei einem Folge-Request automatisch
+  übersprungen (`filterUnseenVideoIds` + `discovery_log`), es wird also nichts doppelt bezahlt -
+  nur die YouTube-Suche selbst läuft pro Versuch erneut (akzeptabel innerhalb des Tages-Budgets).
+- Nebenbei gefixt: die finale Erfolgs-/Fehlermeldung nutzte bisher nur die Stream-Daten des
+  letzten Versuchs (`lastFoundCount`/`doneEvent`) statt der über Polling UND Streaming gemeinsam
+  ermittelten besten bekannten Zahl - dadurch konnte der Zähler live "1/5" zeigen und die
+  Toast-Meldung am Ende trotzdem "Keine neuen Treffer" sagen, wenn der letzte Versuch fehlschlug.
+  Jetzt eine einzige Quelle der Wahrheit (`bestKnownCountRef`, Max aus beiden Kanälen).
+
+**Verifiziert:** alle 45 bestehenden Unit-Tests weiterhin grün (Deadline-Logik ändert nichts an
+den Score-/Confidence-/Novelty-Berechnungen), `npm run build`/`npm run lint` sauber. Live im
+Dev-Server: ein Lauf schloss nach 33,5s (unter der 40s-Grenze) regulär mit "done" ab, ohne
+unnötige Verkettung - die Deadline greift nur ein, wenn tatsächlich nötig, sonst bleibt das
+bisherige Verhalten unverändert.
+
 ## [2026-07-11] Auto-Search-Fortschritt: Polling statt alleiniger Streaming-Response
 
 Nutzer meldete: Auto-Search findet Videos, der Button zeigt aber die ganze Zeit "0/5 gefunden"

@@ -19,6 +19,10 @@ export type DiscoveryRunSummary = {
   videoIdsNew: number;
   results: Array<{ externalId: string; result: ProcessVideoResult }>;
   quotaUsedToday: number;
+  // true = vorzeitig wegen `deadline` beendet (nicht wegen stopAfterFoundCount/maxCandidatesProcessed).
+  // Signal fuer den Client, automatisch mit einem Folge-Request weiterzumachen statt die
+  // Vercel-Function-Laufzeitgrenze zu riskieren (siehe route.ts).
+  timedOut: boolean;
 };
 
 // Auto-Search-Button: Live-Fortschritt fuer einen interaktiv wartenden Nutzer,
@@ -73,9 +77,18 @@ export async function runDiscovery(params: {
   // Treffer gefunden sind oder ein Sicherheitsnetz-Limit erreicht ist.
   stopAfterFoundCount?: number;
   maxCandidatesProcessed?: number;
+  // Epoch-ms: Lauf bricht VOR diesem Zeitpunkt sauber ab (eigener "done"-Event) statt zu
+  // riskieren, dass die Vercel-Function-Laufzeitgrenze mitten in der Verarbeitung zuschlaegt
+  // (dort kommt keine saubere Antwort mehr an - siehe CHANGELOG 2026-07-11). Der Client
+  // erkennt `summary.timedOut` und haengt bei Bedarf automatisch einen Folge-Request an.
+  deadline?: number;
   onProgress?: (event: DiscoveryProgressEvent) => void;
 }): Promise<DiscoveryRunSummary> {
-  const { supabase, youtubeApiKey, maxResultsPerQuery = 10 } = params;
+  const { supabase, youtubeApiKey, maxResultsPerQuery = 10, deadline } = params;
+
+  function timeUp(): boolean {
+    return deadline !== undefined && Date.now() >= deadline;
+  }
 
   const [myths, weights, usedToday] = await Promise.all([
     loadMyths(supabase),
@@ -98,11 +111,16 @@ export async function runDiscovery(params: {
     videoIdsNew: 0,
     results: [],
     quotaUsedToday: usedToday,
+    timedOut: false,
   };
 
   const allFoundIds: string[] = [];
 
   for (const query of queries.slice(0, searchLimit)) {
+    if (timeUp()) {
+      summary.timedOut = true;
+      break;
+    }
     const videoIds = await searchVideoIds(query, youtubeApiKey, maxResultsPerQuery);
     await addQuotaUsage(supabase, YOUTUBE_SEARCH_COST);
     summary.searchesPerformed += 1;
@@ -119,6 +137,10 @@ export async function runDiscovery(params: {
   let foundCount = 0;
 
   function targetReached(): boolean {
+    if (timeUp()) {
+      summary.timedOut = true;
+      return true;
+    }
     return (
       (stopAfterFoundCount !== undefined && foundCount >= stopAfterFoundCount) ||
       (maxCandidatesProcessed !== undefined && checkedCount >= maxCandidatesProcessed)
@@ -141,6 +163,13 @@ export async function runDiscovery(params: {
 
       if (targetReached()) break;
     }
+  }
+
+  // timedOut ist nur relevant, wenn das Ziel nicht ohnehin erreicht wurde - sonst wuerde der
+  // Client nach einem Lauf, der zufaellig genau an der Zeitgrenze fertig wurde, unnoetig einen
+  // Folge-Request anhaengen.
+  if (stopAfterFoundCount !== undefined && foundCount >= stopAfterFoundCount) {
+    summary.timedOut = false;
   }
 
   summary.quotaUsedToday = await getQuotaUsedToday(supabase);

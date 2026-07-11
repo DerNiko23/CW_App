@@ -196,6 +196,24 @@
   Polling feuert zuverlässig alle 1,5 s, stoppt sauber bei Suchende, keine Konsolenfehler; der
   Status-Endpunkt lieferte für das Zeitfenster des ersten Laufs korrekt 7 gefundene Videos (mit
   den tatsächlich in der Inbox gelandeten Funden abgeglichen).
+- [x] **Auto-Search brach nach dem Polling-Fix teils trotzdem mitten im Lauf ab** – Nutzer
+  meldete "mal 1/5, dann kein Treffer, dann hört es auf". Ursache: ein voller Lauf kann real
+  80-150+s dauern (mehrere Claude-Aufrufe + Transkript-Proxy-Retries pro Kandidat, live
+  gemessen), `maxDuration = 300` auf der Route verlässt sich aber darauf, dass Vercels
+  Node-Serverless-Funktionen so lange durchlaufen dürfen - je nach Plan/Konfiguration werden
+  lang laufende Requests dort ohne saubere Antwort gekappt. Fix: `runDiscovery()`
+  (`lib/pipeline/discovery.ts`) bekommt einen `deadline`-Parameter und bricht selbst sauber nach
+  40s ab (`summary.timedOut`), statt die Plattform-Grenze zu riskieren. Der Client
+  (`auto-search-button.tsx`) hängt bei `timedOut = true` automatisch einen Folge-Request an (max.
+  5 insgesamt), bis 5 Treffer erreicht sind oder nichts Neues mehr zu finden ist
+  (`videoIdsNew === 0`) - die anderen Stop-Gründe (Ziel erreicht, MAX_CANDIDATES/MAX_SEARCHES)
+  lösen bewusst KEINE Verkettung aus, sonst würde das die bestehende Kostenbremse aushebeln.
+  Nebenbei einen zweiten Bug im selben Code gefixt: die finale Erfolgsmeldung nutzte nur die
+  Stream-Daten des letzten Versuchs statt der über Polling+Streaming gemeinsam ermittelten besten
+  bekannten Zahl - dadurch konnte der Zähler "1/5" zeigen und die Toast-Meldung trotzdem "Keine
+  neuen Treffer" sagen. Alle 45 bestehenden Unit-Tests weiterhin grün, `npm run build`/
+  `npm run lint` sauber. Live getestet: ein Lauf schloss nach 33,5s (unter der 40s-Grenze) sauber
+  mit "done" ab, ohne unnötige Verkettung.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

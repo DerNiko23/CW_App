@@ -10,6 +10,15 @@ const STOP_AFTER_FOUND = 5;
 const MAX_CANDIDATES = 20;
 const MAX_SEARCHES = 8;
 
+// Ein voller Lauf kann real 80-150+s dauern (mehrere Claude-Aufrufe + Transkript-Proxy-Retries
+// pro Kandidat) - laenger, als sich auf `maxDuration = 300` auf Vercels Node-Serverless-Funktionen
+// verlassen laesst (dort werden lang laufende Requests je nach Plan/Konfiguration gekappt, ohne
+// dass eine saubere Antwort ankommt - live beobachtet, siehe CHANGELOG 2026-07-11). Statt das zu
+// riskieren, bricht `runDiscovery` VOR dieser Grenze selbst sauber ab; der Client
+// (auto-search-button.tsx) erkennt `summary.timedOut` und haengt automatisch einen Folge-Request
+// an, bis 5 Treffer erreicht sind oder nichts Neues mehr zu finden ist.
+const RUN_TIME_BUDGET_MS = 40_000;
+
 // Kein eigener Auth-Check: laeuft (wie /api/pipeline/import) durch proxy.ts
 // und ist damit bereits per Session-Cookie geschuetzt.
 export async function POST() {
@@ -34,6 +43,7 @@ export async function POST() {
           maxSearchesThisRun: MAX_SEARCHES,
           maxCandidatesProcessed: MAX_CANDIDATES,
           stopAfterFoundCount: STOP_AFTER_FOUND,
+          deadline: Date.now() + RUN_TIME_BUDGET_MS,
           onProgress: send,
         });
       } catch (err) {
