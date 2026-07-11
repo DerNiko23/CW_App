@@ -161,6 +161,28 @@ abgerechnet. Transkript-Text ist pro Video klein (wenige KB), daher pro Import v
 bei deutlich höherem Volumen (z. B. sehr viele Auto-Search-Läufe pro Tag) lohnt sich ein Blick auf
 den tatsächlichen Verbrauch im Webshare-Dashboard, bevor der Plan hochskaliert wird.
 
+## E-Book-Seite (`app/ebook/page.tsx`, `components/ebook/flipbook.tsx`)
+
+Button "E-Book" neben Export in der Inbox-Kopfzeile führt auf `/ebook`: das PDF "Heißhunger" als
+blätterbares Buch, gleicher Flow-Field-Hintergrund/Header-Stil wie der Rest der App, plus
+Download-Link auf die Original-PDF.
+
+- **Seiten sind vorgerendert, nicht live geparst.** `scripts/render-ebook-pages.py` (Python,
+  `pypdfium2` – keine externe Binary wie poppler nötig) rendert jede PDF-Seite einmalig zu einem
+  JPEG (`public/ebook/pages/01.jpg`…`30.jpg`, ~1188×1782px) und kopiert die Original-PDF nach
+  `public/ebook.pdf`. Beides wird eingecheckt; die App braucht zur Laufzeit keine
+  PDF-Verarbeitung. Bei einer neuen E-Book-Version: `pip install pypdfium2 pillow` einmalig, dann
+  `python scripts/render-ebook-pages.py` erneut ausführen (Default-Quellpfad
+  `../Ebook/Heisshunger_E-Book_v1.1_final.pdf`, per Argument überschreibbar).
+- **Blättern** über `react-pageflip` (npm) – echter 3D-Seitenumschlag inkl. Ecken-Drag/Swipe,
+  `showCover` zeigt die Titelseite einzeln, automatischer Wechsel Einzel-/Doppelseite je nach
+  Viewport-Breite (`usePortrait`).
+- `next/image` läuft dort mit `unoptimized`: Next.js' eingebaute Bildoptimierung fetcht das
+  Quellbild intern per eigenem Server-Request erneut – dieser trägt keinen Auth-Cookie und wird
+  vom `proxy.ts`-Passwortschutz auf `/login` umgeleitet, was als ungültiges Bild scheitert. Da die
+  JPEGs ohnehin schon für die Zielgröße vorgerendert sind, bringt Next.js' Laufzeit-Resizing hier
+  keinen Mehrwert.
+
 ## Prinzipien
 - **"Würde Chris das morgen früh tatsächlich benutzen?"** – sonst streichen.
 - Demo-First: erster Eindruck darf nie von leerer Liste oder Ladezeit abhängen.

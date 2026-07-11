@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Inbox } from "lucide-react";
+import { BookOpen, Inbox } from "lucide-react";
 import { getInboxItems } from "@/lib/inbox/queries";
 import { parseListParam } from "@/lib/inbox/filter-params";
 import { FlowFieldBackground } from "@/components/flow-field-background";
@@ -9,6 +9,7 @@ import { UrlImportForm } from "@/components/inbox/url-import-form";
 import { ExportLinks } from "@/components/inbox/export-links";
 import { AutoSearchButton } from "@/components/inbox/auto-search-button";
 import { KeyboardTriageProvider, TriageRow } from "@/components/inbox/keyboard-triage";
+import { buttonVariants } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,13 @@ export default async function InboxPage({
         <h1 className="font-heading text-3xl font-semibold text-accent [text-shadow:0_2px_20px_rgba(250,250,250,0.9)] sm:text-4xl">
           Factcheck Inbox
         </h1>
-        <ExportLinks />
+        <div className="flex flex-wrap items-center gap-3">
+          <Link href="/ebook" className={buttonVariants({ variant: "outline" })}>
+            <BookOpen />
+            E-Book
+          </Link>
+          <ExportLinks />
+        </div>
       </header>
 
       <div className="relative z-10">

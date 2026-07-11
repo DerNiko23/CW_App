@@ -171,6 +171,17 @@
   Channel-ID via YouTube API aufgelöst (`UC_NsZgQdK4lTleq_siGOdJw`), `processVideo()` prüft das
   vor Transkript-/Claude-Aufwand, gilt für Auto-Search und manuellen Import gleichermaßen. Live
   mit einem echten aktuellen Video seines Kanals verifiziert. Details in CHANGELOG.
+- [x] E-Book-Seite (`/ebook`) mit echter Blätterfunktion – Button neben Export in der
+  Inbox-Kopfzeile, gleicher Flow-Field-Hintergrund/Header-Stil wie die Inbox. PDF-Seiten vorab mit
+  `pypdfium2` zu JPEGs gerendert (`scripts/render-ebook-pages.py`, Ergebnis eingecheckt unter
+  `public/ebook/`) statt Live-Rendering im Browser – robuster ohne pdf.js-Worker-Setup, schneller
+  beim Blättern bei nur 30 Seiten fester Größe. Realistischer 3D-Seitenumschlag über
+  `react-pageflip`, inkl. Cover-Einzelseite, automatischem Wechsel Einzel-/Doppelseite auf Mobile
+  und Download-Link auf die Original-PDF. `next/image` dabei mit `unoptimized`, weil Next.js'
+  Bildoptimierung intern über `/_next/image` erneut gegen den eigenen Server fetcht – dieser
+  interne Request trägt keinen Auth-Cookie und wurde vom `proxy.ts`-Passwortschutz auf `/login`
+  umgeleitet, was Next.js als "kein gültiges Bild" quittierte. Live im Dev-Server getestet
+  (Desktop-Doppelseite, Mobile-Einzelseite, Tastatur-Pfeile, Download-Link).
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

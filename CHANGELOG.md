@@ -1,5 +1,37 @@
 # CHANGELOG
 
+## [2026-07-11] E-Book-Seite mit Blätterfunktion
+
+Nutzer wollte sein E-Book ("Heißhunger", PDF) direkt aus der App erreichbar machen – ein Button
+neben Export/Titel in der Inbox-Kopfzeile, der auf eine neue Seite im gleichen Design führt und
+das PDF wie ein echtes Buch blätterbar macht statt es nur zu verlinken. Passt zu ROADMAP.md
+Phase 5 ("E-Book-PDF-Link") und MASTERPLAN §8 ("konsistent mit E-Book-Richtung").
+
+**Umsetzung:**
+- PDF-Seiten (30, 6×9") vorab mit `pypdfium2` (Python, keine externen Binaries wie poppler nötig)
+  zu JPEGs gerendert – `scripts/render-ebook-pages.py`, wiederholbar bei neuer E-Book-Version.
+  Ergebnis (`public/ebook/pages/01.jpg`…`30.jpg`, ~1188×1782px, ~5 MB gesamt) eingecheckt statt
+  zur Laufzeit im Browser mit pdf.js zu parsen – robuster (kein Worker-Setup in Next 16) und
+  schneller beim Blättern. Original-PDF zusätzlich nach `public/ebook.pdf` kopiert (Download-Link).
+- Blätter-Effekt mit `react-pageflip` (npm) – realistischer 3D-Seitenumschlag inkl. Ecken-Drag/
+  Swipe, `showCover` für die Titelseite als Einzelseite, automatischer Wechsel Einzel-/Doppelseite
+  je nach Viewport-Breite. Neue Client-Komponente `components/ebook/flipbook.tsx`, neue Route
+  `app/ebook/page.tsx` (gleicher `FlowFieldBackground`/Header-Stil wie die Inbox).
+- Neuer "E-Book"-Button (`BookOpen`-Icon) neben `ExportLinks` im Inbox-Header (`app/page.tsx`).
+- **Bug gefunden+gefixt:** `next/image` gegen die lokalen JPEGs führte zu `400 Bad Request`
+  ("resource isn't a valid image") von `/_next/image`. Ursache: Next.js' Bildoptimierung holt das
+  Quellbild serverseitig per eigenem HTTP-Request erneut vom Server – dieser interne Request trägt
+  keinen Auth-Cookie und wurde vom `proxy.ts`-Passwortschutz (Matcher deckt alle Routen außer
+  `/login`/`_next/static`/`_next/image`/`api/cron` ab) auf `/login` umgeleitet, sodass Next.js
+  HTML statt Bilddaten bekam. Fix: `unoptimized` auf den `next/image`-Komponenten – die JPEGs sind
+  ohnehin schon exakt für die Zielgröße vorgerendert, Next.js' Laufzeit-Resizing hätte hier keinen
+  echten Mehrwert gebracht.
+
+**Live verifiziert:** `/ebook` von der Inbox aus über den neuen Button erreicht, mehrfach
+durchgeblättert (Klick + Tastatur-Pfeile, Vor/Zurück, Seitenzähler korrekt), Desktop-Doppelseite
+und Mobile-Einzelseite (375px) geprüft, Download-Link liefert die vollständige PDF (15,4 MB,
+`application/pdf`) hinter dem bestehenden Passwortschutz. `npm run build`/`npm run lint` sauber.
+
 ## [2026-07-10] Chris' eigene Videos werden nie mehr als Vorschlag importiert
 
 Nutzer: Auto-Search/Import soll nie Chris' eigene Videos (@christianwolf) als Faktencheck-
