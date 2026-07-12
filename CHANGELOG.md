@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## [2026-07-13] Auto-Search: Live-Zähler entfernt + ehrliche Quota-Fehlermeldung
+
+Nutzer meldete zum dritten Mal "funktioniert noch immer nicht" und wollte den "x/5 gefunden"-Zähler
+weg, nur noch "Auto-Search".
+
+**Eigentliche Ursache (diesmal kein Code-Bug):** Die YouTube-Tagesquota (10.000 Units/Tag,
+`search.list` = 100 Units → max. ~100 Suchen/Tag, projektweit geteilt) war durch die vielen echten
+Testläufe der letzten Sessions aufgebraucht. Jeder Klick bekam dadurch sofort ein hartes `429
+RESOURCE_EXHAUSTED` von Google - der Button sah "kaputt" aus, obwohl der Code korrekt war. Per
+Einzel-Probe (1 search.list-Call = 1 % des Tagesbudgets) am 2026-07-13 verifiziert, dass die Quota
+inzwischen zurückgesetzt ist (HTTP 200) - echte Suchen funktionieren also wieder.
+
+**Änderungen (`components/inbox/auto-search-button.tsx`):**
+- Live-Zähler "Suche läuft … x/5 gefunden" entfernt. Der Button zeigt jetzt durchgehend nur
+  "Auto-Search" (mit Spinner während der Suche). `foundCount`-State raus; die beste bekannte
+  Trefferzahl lebt nur noch in einem Ref für die finale Toast-Meldung. Das Live-Nachladen der
+  Inbox während der Suche (Polling + `router.refresh()`) bleibt erhalten - neu gefundene Videos
+  erscheinen weiter sofort, wie ursprünglich gewünscht.
+- Quota-/429-Fehler werden jetzt als eigener, klarer Fall erkannt (`isQuotaError`) und mit einer
+  verständlichen Meldung angezeigt ("YouTube-Tageskontingent aufgebraucht … erst nach dem
+  Quota-Reset wieder möglich") statt als generisches "Suche fehlgeschlagen: … 429 { … }". Damit
+  ist der bisher verwirrende Zustand für Chris nachvollziehbar, statt wie ein Defekt zu wirken.
+
+Das gewünschte Verhalten ("sucht, bis 5 Treffer gefunden sind oder ein Timeout greift") war bereits
+umgesetzt (siehe die beiden Einträge unten) und ist unverändert. 63 Unit-Tests grün,
+`npm run build`/`npm run lint` sauber.
+
 ## [2026-07-11] Auto-Search-Verkettung: echter Test statt nur Code-Review, dabei realen Bug gefunden
 
 Nutzer, zu Recht: "dieser Pfad ist zu fehleranfällig, um ihn ungetestet zu lassen" - wollte den

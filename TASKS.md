@@ -245,6 +245,18 @@
     quota-erschöpfte YouTube-API löste den neuen `serverError`-Pfad aus – genau ein
     `POST /api/pipeline/auto-search` in den Server-Logs (kein Retry), Button korrekt zurück auf
     "Auto-Search" (Idle). 63 Unit-Tests grün, `npm run build`/`npm run lint` sauber.
+- [x] **Auto-Search: "x/5"-Zähler entfernt, Quota-Fehler klar benannt** – Nutzer meldete zum
+  dritten Mal "funktioniert noch immer nicht" und wollte nur noch "Auto-Search" am Button.
+  Ursache diesmal war KEIN Code-Bug, sondern die aufgebrauchte YouTube-Tagesquota (durch die
+  vielen echten Testläufe der Vorsessions) → jeder Klick bekam sofort `429 RESOURCE_EXHAUSTED`.
+  Per Einzel-Probe (1 search.list = 1 % Budget) am 2026-07-13 bestätigt, dass die Quota wieder da
+  ist (HTTP 200). Umgesetzt: Live-Zähler raus (Button nur noch "Auto-Search" + Spinner, kein
+  `foundCount`-State mehr; Live-Inbox-Refresh via Polling bleibt), und Quota-/429-Fehler werden
+  jetzt als eigener Fall (`isQuotaError`) mit verständlicher Meldung angezeigt statt als rohes
+  "Suche fehlgeschlagen: … 429 {…}". Verhalten (bis 5 Treffer oder Timeout) war schon vorher
+  korrekt und unverändert. Build/Lint/63 Tests grün. Lokaler Browser-Test des kompletten
+  End-to-End-Laufs bewusst NICHT gemacht: Dev-Login ist passwortgeschützt (Passwörter tippe ich
+  nicht) und ein voller Lauf würde erneut Quota kosten – stattdessen Code-Inspektion + Quota-Probe.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt

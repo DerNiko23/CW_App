@@ -11,8 +11,9 @@ import { runChainedSearch, type AttemptOutcome } from "@/lib/pipeline/autoSearch
 
 type StreamEvent = DiscoveryProgressEvent | { type: "error"; error: string };
 
-// Muss mit STOP_AFTER_FOUND in app/api/pipeline/auto-search/route.ts übereinstimmen -
-// nur für die Fortschritts-Copy "x/5 gefunden", keine echte Limit-Logik hier.
+// Zielwert: so viele Treffer sammelt die (ggf. verkettete) Suche an, bevor sie stoppt - muss mit
+// STOP_AFTER_FOUND in app/api/pipeline/auto-search/route.ts übereinstimmen. Steuert nur die
+// Verkettungs-Logik, wird bewusst NICHT mehr als Live-Zähler im Button angezeigt.
 const TARGET_FOUND = 5;
 const POLL_INTERVAL_MS = 1500;
 // Jeder Request bricht serverseitig nach RUN_TIME_BUDGET_MS sauber ab (route.ts), statt eine
@@ -24,6 +25,15 @@ const POLL_INTERVAL_MS = 1500;
 // eigenständig getestet (autoSearchChain.test.ts), damit dieser fehleranfällige Pfad nicht nur
 // per Code-Review, sondern durch echte Ausführung abgesichert ist.
 const MAX_ATTEMPTS = 5;
+
+// YouTube gibt bei aufgebrauchtem Tageskontingent ein hartes 429 / RESOURCE_EXHAUSTED zurück -
+// das ist kein normales "keine Treffer", sondern ein technischer Zustand, der bis zum
+// Quota-Reset (Mitternacht US-Westküstenzeit) anhält. Klar benennen, sonst wirkt der Button
+// grundlos kaputt.
+function isQuotaError(message: string): boolean {
+  const m = message.toLowerCase();
+  return m.includes("quota") || m.includes("429") || m.includes("resource_exhausted");
+}
 
 async function runOneAttempt(onProgress: (foundCount: number) => void): Promise<AttemptOutcome> {
   let res: Response;
@@ -73,24 +83,21 @@ async function runOneAttempt(onProgress: (foundCount: number) => void): Promise<
 
 export function AutoSearchButton() {
   const [isSearching, setIsSearching] = useState(false);
-  const [foundCount, setFoundCount] = useState(0);
   const router = useRouter();
   const lastPolledCountRef = useRef(0);
-  // Beste bekannte Zahl aus Streaming UND Polling zusammen - `foundCount` (State) hinkt dem
-  // synchronen Ablauf unten immer einen Render hinterher, für die Anzeige während der laufenden
-  // Verkettung brauchen wir den aktuellen Wert sofort.
+  // Beste bekannte Trefferzahl aus Streaming UND Polling zusammen - nur noch für die finale
+  // Toast-Meldung. Der Button zeigt bewusst keinen Live-Zähler mehr (Wunsch: nur "Auto-Search"),
+  // deshalb reicht ein Ref ohne Re-Render.
   const bestKnownCountRef = useRef(0);
 
   function bumpFoundCount(count: number) {
     if (count > bestKnownCountRef.current) {
       bestKnownCountRef.current = count;
-      setFoundCount(count);
     }
   }
 
   async function handleClick() {
     setIsSearching(true);
-    setFoundCount(0);
     bestKnownCountRef.current = 0;
     lastPolledCountRef.current = 0;
     const startedAt = new Date().toISOString();
@@ -127,7 +134,14 @@ export function AutoSearchButton() {
       const finalCount = Math.max(bestKnownFoundCount, bestKnownCountRef.current);
 
       if (allResults.length === 0 && finalCount === 0 && hardError) {
-        toast.error(`Suche fehlgeschlagen: ${truncateMessage(hardError)}`);
+        if (isQuotaError(hardError)) {
+          toast.error(
+            "YouTube-Tageskontingent aufgebraucht. Die automatische Suche ist erst nach dem Quota-Reset (Mitternacht US-Westküstenzeit) wieder möglich.",
+            { duration: 9000 },
+          );
+        } else {
+          toast.error(`Suche fehlgeschlagen: ${truncateMessage(hardError)}`);
+        }
       } else {
         // Bekannte Einschraenkung (CHANGELOG 2026-07-08): YouTube blockiert die
         // Transkript-Route vermutlich IP-basiert von Cloud-Hosts aus - wenn wirklich
@@ -165,7 +179,7 @@ export function AutoSearchButton() {
       className="ml-auto border-white/40 bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-md hover:bg-white/30"
     >
       {isSearching ? <Loader2 className="animate-spin" /> : <Search />}
-      {isSearching ? `Suche läuft … ${foundCount}/${TARGET_FOUND} gefunden` : "Auto-Search"}
+      Auto-Search
     </Button>
   );
 }
