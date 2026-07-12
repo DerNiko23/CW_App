@@ -9,7 +9,8 @@ import {
   YOUTUBE_SEARCH_COST,
   YOUTUBE_VIDEOS_LIST_COST,
 } from "./quota";
-import { getVideoDetails, searchVideoIds, VIDEOS_LIST_BATCH_SIZE } from "./youtube";
+import { getVideoDetails, searchVideoIds, VIDEOS_LIST_BATCH_SIZE, type VideoDuration } from "./youtube";
+import type { VideoMetadata } from "./types";
 import { loadWeights } from "./weights";
 
 export type DiscoveryRunSummary = {
@@ -83,6 +84,134 @@ export function computeTimedOut(params: {
   return params.timeUp && !(params.otherStopReached || params.allCandidatesChecked);
 }
 
+export type InterleavedDiscoveryResult = {
+  searchesPerformed: number;
+  videoIdsFound: number;
+  videoIdsNew: number;
+  results: Array<{ externalId: string; result: ProcessVideoResult }>;
+  foundCount: number;
+  checkedCount: number;
+  timedOut: boolean;
+};
+
+// Kernschleife der Discovery, mit injizierten IO-Funktionen (Suche/Details/Verarbeitung/Quota),
+// damit das Verhalten OHNE echte Netzwerk-/DB-Aufrufe getestet werden kann (siehe
+// discovery.test.ts). Wichtigste Eigenschaft: Suche und Verarbeitung sind VERZAHNT - nach jeder
+// einzelnen Suche werden deren Kandidaten sofort geprüft und die Schleife bricht ab, sobald genug
+// Treffer da sind. So kostet ein Lauf, der schnell 5 Videos findet, nur 1-2 search.list-Aufrufe
+// (100-200 Units) statt vorher immer alle `searchLimit` Suchen im Voraus (bis 800 Units), auch
+// wenn die ersten Treffer längst gereicht hätten. Filter/Länge ändern die Quota-Kosten NICHT.
+export async function runInterleavedDiscovery(deps: {
+  queries: string[];
+  searchLimit: number;
+  maxResultsPerQuery: number;
+  videoDurationFilter?: VideoDuration;
+  stopAfterFoundCount?: number;
+  maxCandidatesProcessed?: number;
+  timeUp: () => boolean;
+  search: (query: string, maxResults: number, videoDuration?: VideoDuration) => Promise<string[]>;
+  filterUnseen: (ids: string[]) => Promise<string[]>;
+  getDetails: (ids: string[]) => Promise<VideoMetadata[]>;
+  process: (metadata: VideoMetadata) => Promise<ProcessVideoResult>;
+  onSearchCost: () => Promise<void> | void;
+  onDetailsCost: () => Promise<void> | void;
+  onCandidate?: (
+    result: ProcessVideoResult,
+    externalId: string,
+    foundCount: number,
+    checkedCount: number,
+  ) => void;
+}): Promise<InterleavedDiscoveryResult> {
+  const {
+    queries,
+    searchLimit,
+    maxResultsPerQuery,
+    videoDurationFilter,
+    stopAfterFoundCount,
+    maxCandidatesProcessed,
+    timeUp,
+    search,
+    filterUnseen,
+    getDetails,
+    process,
+    onSearchCost,
+    onDetailsCost,
+    onCandidate,
+  } = deps;
+
+  let searchesPerformed = 0;
+  let videoIdsFound = 0;
+  let videoIdsNew = 0;
+  const results: Array<{ externalId: string; result: ProcessVideoResult }> = [];
+  let foundCount = 0;
+  let checkedCount = 0;
+  // IDs, die in diesem Lauf schon zur Verarbeitung eingereiht wurden - verhindert, dass zwei
+  // Queries dasselbe Video doppelt durch die (teure) Claude-Verarbeitung schicken.
+  const seenThisRun = new Set<string>();
+  let brokeEarly = false;
+
+  function otherStopReached(): boolean {
+    return (
+      (stopAfterFoundCount !== undefined && foundCount >= stopAfterFoundCount) ||
+      (maxCandidatesProcessed !== undefined && checkedCount >= maxCandidatesProcessed)
+    );
+  }
+
+  function targetReached(): boolean {
+    return otherStopReached() || timeUp();
+  }
+
+  searchLoop: for (const query of queries.slice(0, searchLimit)) {
+    if (targetReached()) {
+      brokeEarly = true;
+      break;
+    }
+
+    const ids = await search(query, maxResultsPerQuery, videoDurationFilter);
+    await onSearchCost();
+    searchesPerformed += 1;
+    videoIdsFound += ids.length;
+
+    const fresh = ids.filter((id) => !seenThisRun.has(id));
+    fresh.forEach((id) => seenThisRun.add(id));
+    const newIds = await filterUnseen(fresh);
+    videoIdsNew += newIds.length;
+
+    for (let i = 0; i < newIds.length; i += VIDEOS_LIST_BATCH_SIZE) {
+      if (targetReached()) {
+        brokeEarly = true;
+        break searchLoop;
+      }
+      const batch = newIds.slice(i, i + VIDEOS_LIST_BATCH_SIZE);
+      const details = await getDetails(batch);
+      await onDetailsCost();
+
+      for (const metadata of details) {
+        const result = await process(metadata);
+        results.push({ externalId: metadata.externalId, result });
+        checkedCount += 1;
+        if (result.status === "processed" && passesConfidenceThreshold(result.bestClaim.confidence.score)) {
+          foundCount += 1;
+        }
+        onCandidate?.(result, metadata.externalId, foundCount, checkedCount);
+
+        if (targetReached()) {
+          brokeEarly = true;
+          break searchLoop;
+        }
+      }
+    }
+  }
+
+  const timedOut = computeTimedOut({
+    timeUp: timeUp(),
+    otherStopReached: otherStopReached(),
+    allCandidatesChecked: !brokeEarly,
+  });
+
+  return { searchesPerformed, videoIdsFound, videoIdsNew, results, foundCount, checkedCount, timedOut };
+}
+
 export async function runDiscovery(params: {
   supabase: SupabaseClient;
   youtubeApiKey: string;
@@ -92,6 +221,9 @@ export async function runDiscovery(params: {
   // Treffer gefunden sind oder ein Sicherheitsnetz-Limit erreicht ist.
   stopAfterFoundCount?: number;
   maxCandidatesProcessed?: number;
+  // Optionaler Längen-Filter für die YouTube-Suche (z. B. "short" für Kurzvideos). Ändert die
+  // Quota-Kosten NICHT, ist rein inhaltlich - siehe VideoDuration in youtube.ts.
+  videoDurationFilter?: VideoDuration;
   // Epoch-ms: Lauf bricht VOR diesem Zeitpunkt sauber ab (eigener "done"-Event) statt zu
   // riskieren, dass die Vercel-Function-Laufzeitgrenze mitten in der Verarbeitung zuschlaegt
   // (dort kommt keine saubere Antwort mehr an - siehe CHANGELOG 2026-07-11). Der Client
@@ -99,7 +231,16 @@ export async function runDiscovery(params: {
   deadline?: number;
   onProgress?: (event: DiscoveryProgressEvent) => void;
 }): Promise<DiscoveryRunSummary> {
-  const { supabase, youtubeApiKey, maxResultsPerQuery = 10, deadline } = params;
+  const {
+    supabase,
+    youtubeApiKey,
+    maxResultsPerQuery = 10,
+    deadline,
+    videoDurationFilter,
+    stopAfterFoundCount,
+    maxCandidatesProcessed,
+    onProgress,
+  } = params;
 
   function timeUp(): boolean {
     return deadline !== undefined && Date.now() >= deadline;
@@ -119,89 +260,34 @@ export async function runDiscovery(params: {
     params.maxSearchesThisRun ?? budgetAllowedSearches,
   );
 
-  const summary: DiscoveryRunSummary = {
-    queriesAvailable: queries.length,
-    searchesPerformed: 0,
-    videoIdsFound: 0,
-    videoIdsNew: 0,
-    results: [],
-    quotaUsedToday: usedToday,
-    timedOut: false,
-  };
-
-  const allFoundIds: string[] = [];
-
-  for (const query of queries.slice(0, searchLimit)) {
-    if (timeUp()) break;
-    const videoIds = await searchVideoIds(query, youtubeApiKey, maxResultsPerQuery);
-    await addQuotaUsage(supabase, YOUTUBE_SEARCH_COST);
-    summary.searchesPerformed += 1;
-    summary.videoIdsFound += videoIds.length;
-    allFoundIds.push(...videoIds);
-  }
-
-  const uniqueFoundIds = Array.from(new Set(allFoundIds));
-  const newIds = await filterUnseenVideoIds(supabase, uniqueFoundIds);
-  summary.videoIdsNew = newIds.length;
-
-  const { stopAfterFoundCount, maxCandidatesProcessed, onProgress } = params;
-  let checkedCount = 0;
-  let foundCount = 0;
-
-  // Ziel erreicht / Kosten-Sicherheitsnetz gegriffen - unabhaengig von der Zeit. Bewusst getrennt
-  // von der Zeit-Pruefung (siehe targetReached()): beide werden am Ende UNABHAENGIG voneinander
-  // aus dem finalen checkedCount/foundCount neu berechnet (computeTimedOut), damit ein
-  // zeitgleiches Erreichen beider Bedingungen nicht dazu fuehrt, dass die zuerst ausgewertete
-  // das Ergebnis verfaelscht.
-  function otherStopReached(): boolean {
-    return (
-      (stopAfterFoundCount !== undefined && foundCount >= stopAfterFoundCount) ||
-      (maxCandidatesProcessed !== undefined && checkedCount >= maxCandidatesProcessed)
-    );
-  }
-
-  function targetReached(): boolean {
-    return otherStopReached() || timeUp();
-  }
-
-  // true, wenn eine der beiden Schleifen unten ueber targetReached() vorzeitig verlassen wurde -
-  // bewusst nicht aus `checkedCount`/`newIds.length` abgeleitet: `getVideoDetails` kann pro Batch
-  // weniger Details liefern als angefragt (z. B. bei zwischenzeitlich geloeschten Videos), dann
-  // haette `checkedCount` eine Luecke und wuerde faelschlich wie unvollstaendige Arbeit aussehen.
-  let brokeEarly = false;
-
-  candidateLoop: for (let i = 0; i < newIds.length; i += VIDEOS_LIST_BATCH_SIZE) {
-    if (targetReached()) {
-      brokeEarly = true;
-      break;
-    }
-    const batch = newIds.slice(i, i + VIDEOS_LIST_BATCH_SIZE);
-    const details = await getVideoDetails(batch, youtubeApiKey);
-    await addQuotaUsage(supabase, YOUTUBE_VIDEOS_LIST_COST);
-
-    for (const metadata of details) {
-      const result = await processVideo({ supabase, metadata, myths, weights });
-      summary.results.push({ externalId: metadata.externalId, result });
-      checkedCount += 1;
-      if (result.status === "processed" && passesConfidenceThreshold(result.bestClaim.confidence.score)) {
-        foundCount += 1;
-      }
-      onProgress?.({ type: "candidate", externalId: metadata.externalId, result, foundCount, checkedCount });
-
-      if (targetReached()) {
-        brokeEarly = true;
-        break candidateLoop;
-      }
-    }
-  }
-
-  summary.timedOut = computeTimedOut({
-    timeUp: timeUp(),
-    allCandidatesChecked: !brokeEarly,
-    otherStopReached: otherStopReached(),
+  const loop = await runInterleavedDiscovery({
+    queries,
+    searchLimit,
+    maxResultsPerQuery,
+    videoDurationFilter,
+    stopAfterFoundCount,
+    maxCandidatesProcessed,
+    timeUp,
+    search: (query, maxResults, duration) => searchVideoIds(query, youtubeApiKey, maxResults, duration),
+    filterUnseen: (ids) => filterUnseenVideoIds(supabase, ids),
+    getDetails: (ids) => getVideoDetails(ids, youtubeApiKey),
+    process: (metadata) => processVideo({ supabase, metadata, myths, weights }),
+    onSearchCost: () => addQuotaUsage(supabase, YOUTUBE_SEARCH_COST),
+    onDetailsCost: () => addQuotaUsage(supabase, YOUTUBE_VIDEOS_LIST_COST),
+    onCandidate: (result, externalId, foundCount, checkedCount) =>
+      onProgress?.({ type: "candidate", externalId, result, foundCount, checkedCount }),
   });
 
-  summary.quotaUsedToday = await getQuotaUsedToday(supabase);
-  onProgress?.({ type: "done", summary, foundCount, checkedCount });
+  const summary: DiscoveryRunSummary = {
+    queriesAvailable: queries.length,
+    searchesPerformed: loop.searchesPerformed,
+    videoIdsFound: loop.videoIdsFound,
+    videoIdsNew: loop.videoIdsNew,
+    results: loop.results,
+    quotaUsedToday: await getQuotaUsedToday(supabase),
+    timedOut: loop.timedOut,
+  };
+
+  onProgress?.({ type: "done", summary, foundCount: loop.foundCount, checkedCount: loop.checkedCount });
   return summary;
 }

@@ -46,12 +46,19 @@ export function parseVideoId(url: string): string | null {
   }
 }
 
+// YouTube kennt keinen echten "nur Shorts"-Filter, nur eine grobe Längen-Einteilung:
+// short = < 4 Min, medium = 4-20 Min, long = > 20 Min. "short" erwischt Shorts + kurze Videos,
+// schließt aber auch längere Erklärvideos aus (z. B. das 5:28-Galileo-Video). Ändert die
+// Quota-Kosten NICHT (search.list bleibt 100 Units), ist rein inhaltlich.
+export type VideoDuration = "short" | "medium" | "long";
+
 // search.list – 100 Units pro Aufruf. Liefert nur Video-IDs; Details/Statistiken
 // kommen separat über getVideoDetails (billiger, batchbar).
 export async function searchVideoIds(
   query: string,
   apiKey: string,
   maxResults = 10,
+  videoDuration?: VideoDuration,
 ): Promise<string[]> {
   const url = new URL(`${API_BASE}/search`);
   url.searchParams.set("part", "snippet");
@@ -60,6 +67,7 @@ export async function searchVideoIds(
   url.searchParams.set("maxResults", String(maxResults));
   url.searchParams.set("regionCode", "DE");
   url.searchParams.set("relevanceLanguage", "de");
+  if (videoDuration) url.searchParams.set("videoDuration", videoDuration);
   url.searchParams.set("key", apiKey);
 
   const res = await fetch(url.toString());

@@ -8,7 +8,16 @@ export const maxDuration = 300;
 // Sicherheitsnetze (Claude-Kosten/Wartezeit bzw. YouTube-Quota), siehe CHANGELOG.
 const STOP_AFTER_FOUND = 5;
 const MAX_CANDIDATES = 20;
-const MAX_SEARCHES = 8;
+// Von 8 auf 4 gesenkt (2026-07-13): deckelt den Worst-Case-Quota-Verbrauch pro Klick auf 4
+// search.list-Aufrufe (= 400 statt 800 Units), falls ein Lauf gar keine Treffer findet und
+// deshalb wirklich alle Suchen ausschöpft. Im Normalfall greift ohnehin der frühe Abbruch in
+// runInterleavedDiscovery (Suche stoppt, sobald 5 Treffer da sind), siehe CHANGELOG 2026-07-13.
+const MAX_SEARCHES = 4;
+
+// Chris' Themen laufen fast ausschließlich als Kurzvideos/Shorts - die Suche auf "short" (< 4 Min)
+// beschränken, um den Fokus zu schärfen. WICHTIG: spart KEINE Quota (search.list bleibt 100 Units)
+// und schließt längere Videos aus (z. B. das 5:28-Galileo-Video würde so nicht mehr gefunden).
+const VIDEO_DURATION_FILTER = "short" as const;
 
 // Ein voller Lauf kann real 80-150+s dauern (mehrere Claude-Aufrufe + Transkript-Proxy-Retries
 // pro Kandidat) - laenger, als sich auf `maxDuration = 300` auf Vercels Node-Serverless-Funktionen
@@ -43,6 +52,7 @@ export async function POST() {
           maxSearchesThisRun: MAX_SEARCHES,
           maxCandidatesProcessed: MAX_CANDIDATES,
           stopAfterFoundCount: STOP_AFTER_FOUND,
+          videoDurationFilter: VIDEO_DURATION_FILTER,
           deadline: Date.now() + RUN_TIME_BUDGET_MS,
           onProgress: send,
         });

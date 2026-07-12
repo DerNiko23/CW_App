@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## [2026-07-13] Auto-Search: Quota sparen durch verzahnte Suche + Kurzvideo-Filter
+
+Nutzer fragte, ob ein „nur Shorts"-Filter Quota spart. Antwort: **nein** – `search.list` kostet fix
+100 Units, egal welche Filter. Der eigentliche Kostentreiber lag woanders: Die alte
+`runDiscovery`-Struktur feuerte **erst alle bis zu 8 Suchen ab** (bis 800 Units) und verarbeitete
+danach – selbst wenn die ersten 1–2 Suchen schon genug Treffer geliefert hätten. Nach Rücksprache
+alle drei besprochenen Hebel umgesetzt:
+
+**1. Verzahnte Suche mit frühem Abbruch (der eigentliche Quota-Spar-Mechanismus).**
+`runDiscovery` in eine testbare Kernschleife `runInterleavedDiscovery` (lib/pipeline/discovery.ts)
+umgebaut: Suche und Verarbeitung sind jetzt verschränkt – nach **jeder einzelnen** Suche werden
+deren Kandidaten sofort geprüft, und sobald `stopAfterFoundCount` (5) erreicht ist, wird
+**keine weitere Suche mehr abgesetzt**. Ein Lauf, der schnell 5 Videos findet, kostet damit nur
+1–2 `search.list`-Aufrufe (100–200 Units) statt bisher immer bis zu 800. Die IO-Funktionen
+(Suche/Details/Verarbeitung/Quota) werden injiziert, damit der Mechanismus ohne echte Netzwerk-/
+DB-Aufrufe getestet werden kann. Cross-Query-Dedup (`seenThisRun`) verhindert, dass zwei Queries
+dasselbe Video doppelt durch die teure Claude-Verarbeitung schicken. `computeTimedOut`-Logik und
+das `summary.timedOut`-Verhalten (Client-Verkettung) bleiben unverändert.
+
+**2. `MAX_SEARCHES` von 8 auf 4 gesenkt** (app/api/pipeline/auto-search/route.ts). Deckelt den
+Worst Case (Lauf findet gar nichts → schöpft wirklich alle Suchen aus) auf 400 statt 800 Units pro
+Klick. Im Normalfall greift ohnehin schon der frühe Abbruch aus Punkt 1.
+
+**3. Kurzvideo-Filter** `videoDuration=short` (< 4 Min) für die Auto-Search-Suche
+(youtube.ts: neuer optionaler Parameter + `VideoDuration`-Typ; durchgereicht über `runDiscovery`).
+Fokussiert auf Short-Form-Content (Chris' Themenfeld). **Spart bewusst KEINE Quota** (nur
+inhaltlich) und ist **kein exakter Shorts-Filter** – die YouTube-API kann das nicht, „short" heißt
+schlicht < 4 Min. ACHTUNG / bekannter Trade-off: dadurch fallen längere Videos raus, u. a. das
+aktuell höchstbewertete Inbox-Item (Galileo, 5:28). Nur auf dem Auto-Search-Button aktiv; der
+tägliche Cron (`/api/cron/discover`) sucht weiter ohne Längenfilter, findet also auch längere
+Videos. Leicht umkehrbar (eine Konstante in route.ts).
+
+**Verifikation:** 6 neue Unit-Tests für `runInterleavedDiscovery` (früher Abbruch bei genug
+Treffern → nur 1 Suche; ohne Treffer alle erlaubten Suchen; Timeout mittendrin → `timedOut`;
+Filter-Durchreichung; Cross-Query-Dedup; Quota-Callbacks pro Suche/Batch). Zusätzlich per echtem
+API-Aufruf bestätigt, dass `videoDuration=short` von YouTube akzeptiert wird und Treffer liefert
+(HTTP 200) – das ist das Einzige, was Unit-Tests nicht abdecken können. Insgesamt 69 Tests grün,
+`npm run build`/`npm run lint` sauber. Kein voller Browser-Klick-Test (Dev-Login passwortgeschützt,
+voller Lauf würde erneut Quota kosten) – stattdessen Unit-Coverage + gezielte API-Probe.
+
 ## [2026-07-13] Auto-Search: Live-Zähler entfernt + ehrliche Quota-Fehlermeldung
 
 Nutzer meldete zum dritten Mal "funktioniert noch immer nicht" und wollte den "x/5 gefunden"-Zähler

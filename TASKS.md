@@ -257,6 +257,19 @@
   korrekt und unverändert. Build/Lint/63 Tests grün. Lokaler Browser-Test des kompletten
   End-to-End-Laufs bewusst NICHT gemacht: Dev-Login ist passwortgeschützt (Passwörter tippe ich
   nicht) und ein voller Lauf würde erneut Quota kosten – stattdessen Code-Inspektion + Quota-Probe.
+- [x] **Auto-Search: Quota-Verbrauch gesenkt (verzahnte Suche + Kurzvideo-Filter)** – Nutzer
+  fragte, ob ein Shorts-Filter Quota spart. Klargestellt: nein (search.list = fix 100 Units, egal
+  welche Filter). Echter Kostentreiber war, dass `runDiscovery` erst ALLE bis zu 8 Suchen abfeuerte
+  und dann erst verarbeitete. Auf Wunsch alle drei Hebel umgesetzt: (1) `runInterleavedDiscovery`
+  verzahnt Suche + Verarbeitung und stoppt weitere Suchen, sobald 5 Treffer da sind → 1–2 statt bis
+  zu 8 search.list-Aufrufe im Normalfall; als testbare Funktion mit injizierten IO-Deps extrahiert.
+  (2) `MAX_SEARCHES` 8→4 (deckelt Worst Case auf 400 Units/Klick). (3) `videoDuration=short`-Filter
+  für die Auto-Search-Suche (youtube.ts). Trade-off dokumentiert: „short" = < 4 Min, kein exakter
+  Shorts-Filter, schließt längere Videos aus (z. B. Galileo 5:28, aktuell Top-Item) – nur auf dem
+  Button aktiv, Cron sucht weiter ohne Längenfilter. 6 neue Unit-Tests für die verzahnte Schleife
+  (früher Abbruch, Timeout, Filter-Durchreichung, Dedup, Quota-Callbacks) + echte API-Probe, dass
+  `videoDuration=short` von YouTube akzeptiert wird (HTTP 200). 69 Tests grün, Build/Lint sauber.
+  Kein voller Browser-Klick (Login passwortgeschützt, Quota-Kosten) – Unit-Coverage + API-Probe.
 - [ ] Loom-Skript schreiben (Narrativ: Pipeline ist das Produkt)
 - [ ] `CRON_SECRET` vor der finalen Einreichung rotieren (aktueller Wert war zum manuellen Testen per Browser-URL sichtbar)
 - [x] `AUTH_PASSWORD` ist in Vercel Production bereits ein echtes Passwort (nicht mehr `test-local-only`) – beim Nachtesten entdeckt, nur der Haken hatte noch gefehlt
